@@ -2,8 +2,6 @@
 # Standard library
 # -----------------------------
 import io
-import re
-from datetime import datetime
 
 # -----------------------------
 # Third-party libraries
@@ -17,10 +15,9 @@ from fastapi import (
     File,
     HTTPException,
     Form,
-    Body,
 )
 from fastapi.templating import Jinja2Templates
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -32,6 +29,7 @@ from azureComment import (
     process_work_items,
     get_work_item_url,
     get_metric_value,
+    get_status,
 )
 
 # -----------------------------
@@ -57,51 +55,13 @@ app.add_middleware(
 app.include_router(hello_routes.router)
 
 
-# -----------------------------
-# Status Logic (Duplicate - consider DRY)
-# -----------------------------
-def get_status(metric, value):
-    if metric == "CLS":
-        if value < 0.1:
-            return "Green"
-        elif value < 0.25:
-            return "Amber"
-        else:
-            return "Red"
-
-    elif metric == "INP":
-        if value < 0.2:
-            return "Green"
-        elif value < 0.5:
-            return "Amber"
-        else:
-            return "Red"
-
-    elif metric == "LCP":
-        if value < 2.5:
-            return "Green"
-        elif value < 4.0:
-            return "Amber"
-        else:
-            return "Red"
-
-    return "Unknown"
-
 
 # -----------------------------
 # Routes
 # -----------------------------
-# @app.get("/", response_class=HTMLResponse)
-# async def hello(request: Request):
-#     return templates.TemplateResponse(
-#         request=request,
-#         # name="upload.html",
-#     )
 
-
-@app.post("/run-script", response_class=HTMLResponse)
+@app.post("/run-script")
 async def run_script(
-    request: Request,
     file: UploadFile = File(None),
     ticket_numbers: str = Form(""),
 ):
@@ -193,7 +153,7 @@ async def run_script(
 # -----------------------------
 # Analyze endpoint
 # -----------------------------
-@app.post("/analyze", response_class=HTMLResponse)
+@app.post("/analyze")
 async def analyze(request: Request, ticket_ids: str = Form(...)):
     ids = [x.strip() for x in ticket_ids.split(",") if x.strip()]
 
@@ -215,19 +175,47 @@ async def analyze(request: Request, ticket_ids: str = Form(...)):
 # Get metric endpoint
 # -----------------------------
 @app.get("/get-metric")
-def get_metric(ticket_id: str, url: str, metric: str, days: int = Query(...)):
-    value = get_metric_value(url, metric, days_back=days)
+def get_metric(
+    ticket_id: str,
+    url: str,
+    metric: str,
+    since: str | None = Query(None, description="Relative window e.g. '7 days', '30 minutes'"),
+    from_time: str | None = Query(None, description="Custom range start, 'YYYY-MM-DD HH:MM:SS'"),
+    to_time: str | None = Query(None, description="Custom range end, 'YYYY-MM-DD HH:MM:SS'"),
+    timezone: str | None = Query(None, description="IANA timezone, e.g. 'Asia/Kolkata'"),
+):
+    # Validate: if one of from/to is supplied, both must be
+    if bool(from_time) ^ bool(to_time):
+        raise HTTPException(
+            status_code=400,
+            detail="from_time and to_time must be supplied together.",
+        )
+
+    value = get_metric_value(
+        url,
+        metric,
+        since=since,
+        from_time=from_time,
+        to_time=to_time,
+        timezone=timezone,
+    )
 
     status = None
     if metric and value is not None:
         status = get_status(metric, value)
+
+    # Human-readable label of the window used
+    if from_time and to_time:
+        window = f"{from_time} → {to_time}" + (f" ({timezone})" if timezone else "")
+    else:
+        window = since or "7 days"
 
     return JSONResponse(
         {
             "response_from": "New Relic",
             "ticket_id": ticket_id,
             "value": value,
-            "days": days,
+            "window": window,
             "status": status,
             "url": url,
         }
@@ -241,6 +229,10 @@ class TicketIdRequest(BaseModel):
     ticket_id: str
     newrelic_value: float | None = None
     newrelic_status: str | None = None
+    since: str | None = None
+    from_time: str | None = None
+    to_time: str | None = None
+    timezone: str | None = None
 
 
 # -----------------------------
@@ -273,7 +265,13 @@ def comment_and_assign(payload: TicketIdRequest):
             f"value={newrelic_value}, status={newrelic_status}"
         )
 
-        process_work_items([ticket_id], days_back=7)
+        process_work_items(
+            [ticket_id],
+            since=payload.since,
+            from_time=payload.from_time,
+            to_time=payload.to_time,
+            timezone=payload.timezone,
+        )
 
         return JSONResponse(
             {

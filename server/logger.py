@@ -35,14 +35,7 @@ if not os.path.exists(output_file):
 # Logger function
 # -----------------------------
 def log_issue(work_item_id, pageURL, metric, status, value, days):
-    """
-    Append amber/red metrics to a JSON file.
-
-    Each entry includes:
-    - work item details
-    - metric info
-    - timestamp
-    """
+    """Append amber/red metric entry to the daily JSON report."""
 
     new_entry = {
         "work_item_id": work_item_id,

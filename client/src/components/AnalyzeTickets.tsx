@@ -12,13 +12,13 @@ type WorkItem = {
 type AnalyzeTicketsProps = {
   onResult: (data: WorkItem[]) => void;
 };
+
 export default function AnalyzeTickets({ onResult }: AnalyzeTicketsProps) {
   const [ticketInput, setTicketInput] = useState("");
   const [fileName, setFileName] = useState("");
   const [ticketsCount, setTicketsCount] = useState(0);
-  const [result, setResult] = useState<any>(null);
+  const [submitting, setSubmitting] = useState(false);
 
-  // console.log('RESULT-------->', result)
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleTicketInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -36,7 +36,25 @@ export default function AnalyzeTickets({ onResult }: AnalyzeTicketsProps) {
     }
   };
 
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    const file = e.dataTransfer.files?.[0];
+    if (file && fileInputRef.current) {
+      const dt = new DataTransfer();
+      dt.items.add(file);
+      fileInputRef.current.files = dt.files;
+      setFileName(file.name);
+    }
+  };
+
   const handleSubmit = async () => {
+    if (!ticketInput.trim() && !fileInputRef.current?.files?.[0]) return;
+
+    setSubmitting(true);
     const formData = new FormData();
     if (ticketInput.trim()) formData.append("ticket_numbers", ticketInput);
     if (fileInputRef.current?.files?.[0])
@@ -48,71 +66,119 @@ export default function AnalyzeTickets({ onResult }: AnalyzeTicketsProps) {
         body: formData,
       });
       const data = await response.json();
-      setResult(data);
-      if (onResult) onResult(data); // <-- update dashboard data in App
+      if (onResult) onResult(data);
+
+      // Auto-scroll to dashboard once data is back
+      setTimeout(() => {
+        document
+          .getElementById("dashboard")
+          ?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 100);
     } catch (err) {
       console.error("Error submitting form:", err);
+      alert("Failed to analyze tickets. Is the backend running on port 8000?");
+    } finally {
+      setSubmitting(false);
     }
   };
 
+  const canSubmit = ticketInput.trim().length > 0 || fileName.length > 0;
+
   return (
-    <div className="card">
-      <div className="row">
-        {/* Left: Ticket URLs */}
-        <div className="column">
-          <div className="header">
-            <div className="icon purple">⬆️</div>
-            <div>
-              <h3>Enter Ticket URLs</h3>
-              <p>Add multiple ticket URLs separated by commas</p>
-            </div>
-          </div>
-          <textarea
-            placeholder="e.g. JIRA-123, JIRA-456, JIRA-789"
-            value={ticketInput}
-            onChange={handleTicketInput}
-          />
-          <div className="status">✅ No. of tickets added: {ticketsCount}</div>
-        </div>
+    <section className="analyze-section" id="analyze">
+      <div className="analyze-hero">
+        <h1 className="hero-title">
+          Let's analyze your{" "}
+          <span className="hero-accent">Core Web Vitals</span>
+          <br />
+          issues
+        </h1>
+        <p className="hero-subtitle">
+          Add your ticket URLs manually
+          <br />
+          or upload a CSV file to get started.
+        </p>
 
-        {/* Divider with OR */}
-        <div className="divider">
-          <span>OR</span>
-        </div>
-
-        {/* Right: Upload CSV */}
-        <div className="column">
-          <div className="header">
-            <div className="icon green">⬆️</div>
-            <div>
-              <h3>Upload CSV File</h3>
-              <p>Upload a CSV file with ticket URLs</p>
-            </div>
+        <div className="hero-illustration">
+          <div className="hero-gauge">
+            <div className="gauge-arc" />
+            <div className="gauge-needle" />
           </div>
-          <div
-            className="dropzone"
-            onClick={() => fileInputRef.current?.click()}
-          >
-            <div className="big-icon">⬆️</div>
-            <p>Drag and drop your CSV file here</p>
-            <p className="browse">or browse files</p>
-            <input
-              type="file"
-              accept=".csv,.xlsx,.xls"
-              ref={fileInputRef}
-              style={{ display: "none" }}
-              onChange={handleFileChange}
+          <div className="hero-chips">
+            <span className="hero-chip lcp">LCP</span>
+            <span className="hero-chip cls">CLS</span>
+            <span className="hero-chip inp">INP</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="analyze-card">
+        <div className="analyze-row">
+          <div className="analyze-column">
+            <div className="ax-header">
+              <div className="ax-icon purple">🔗</div>
+              <div>
+                <h3>Enter Ticket URLs</h3>
+                <p>Add multiple ticket URLs separated by commas</p>
+              </div>
+            </div>
+            <textarea
+              placeholder="e.g. 8703559, 8712320, 8712376"
+              value={ticketInput}
+              onChange={handleTicketInput}
             />
-            {fileName && <p className="selected">Selected: {fileName}</p>}
+            <div className="status">
+              <span className="status-tick">✓</span> No. of tickets added:{" "}
+              <strong>{ticketsCount}</strong>
+            </div>
           </div>
-          <div className="hint">Supported format: .csv, .xlsx, .xls ℹ️</div>
+
+          <div className="analyze-divider">
+            <span>OR</span>
+          </div>
+
+          <div className="analyze-column">
+            <div className="ax-header">
+              <div className="ax-icon green">⬆</div>
+              <div>
+                <h3>Upload CSV File</h3>
+                <p>Upload a CSV file with ticket URLs</p>
+              </div>
+            </div>
+            <div
+              className="dropzone"
+              onClick={() => fileInputRef.current?.click()}
+              onDragOver={handleDragOver}
+              onDrop={handleDrop}
+            >
+              <div className="dropzone-icon">☁️</div>
+              <p className="dropzone-main">Drag and drop your CSV file here</p>
+              <p>
+                or <span className="browse">browse files</span>
+              </p>
+              <input
+                type="file"
+                accept=".csv,.xlsx,.xls"
+                ref={fileInputRef}
+                style={{ display: "none" }}
+                onChange={handleFileChange}
+              />
+              {fileName && <p className="selected">Selected: {fileName}</p>}
+            </div>
+            <div className="hint">Supported format: .csv ⓘ</div>
+          </div>
+        </div>
+
+        <div className="analyze-footer">
+          <button
+            className="analyze-btn"
+            onClick={handleSubmit}
+            disabled={!canSubmit || submitting}
+          >
+            {submitting ? "Analyzing…" : "Analyze CWV Issues →"}
+          </button>
         </div>
       </div>
-      <div className="footer">
-        <button className="analyze-btn" onClick={handleSubmit}>
-          Analyze CWV Issues
-        </button>
-      </div>
-    </div>
+    </section>
   );
 }

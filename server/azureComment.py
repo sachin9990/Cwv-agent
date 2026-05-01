@@ -19,19 +19,20 @@ load_dotenv()
 organization = os.getenv("AZDO_ORG")
 project = os.getenv("AZDO_PROJECT")
 personal_access_token = os.getenv("AZDO_PAT")
+AZDO_BASE_URL = f"https://dev.azure.com/{organization}/{project}/_apis/wit/workitems"
 
 # New Relic configuration
 account_id = os.getenv("NEWRELIC_ACCOUNT_ID")
 api_key = os.getenv("NEWRELIC_API_KEY")
 
-# Certificate Path
-# custom_ca = os.getenv("CUSTOM_CA")
-
 # Control flag
 DRY_RUN = True  # Set to False to enable actual updates
 
-# Default lookback
-days_back = 30
+METRIC_MAP = {
+    "CLS": "cumulativeLayoutShift",
+    "INP": "interactionToNextPaint",
+    "LCP": "largestContentfulPaint",
+}
 
 
 # -----------------------------
@@ -66,23 +67,39 @@ def get_status(metric, value):
 
 
 # -----------------------------
+# Build NRQL time clause
+# -----------------------------
+def _build_time_clause(since=None, from_time=None, to_time=None, timezone=None):
+    """
+    Returns the NRQL time clause:
+      - relative:  SINCE 7 days ago
+      - custom:    SINCE '2026-04-25 00:00:00' UNTIL '2026-05-01 00:00:00' WITH TIMEZONE 'Asia/Kolkata'
+    Defaults to "SINCE 7 days ago" when nothing is supplied.
+    """
+    if from_time and to_time:
+        clause = f"SINCE '{from_time}' UNTIL '{to_time}'"
+        if timezone:
+            clause += f" WITH TIMEZONE '{timezone}'"
+        return clause
+
+    relative = since or "7 days"
+    return f"SINCE {relative} ago"
+
+
+# -----------------------------
 # Get metric from New Relic
 # -----------------------------
-def get_metric_value(pageURL, metric, days_back):
-    metric_map = {
-        "CLS": "cumulativeLayoutShift",
-        "INP": "interactionToNextPaint",
-        "LCP": "largestContentfulPaint",
-    }
+def get_metric_value(pageURL, metric, since=None, from_time=None, to_time=None, timezone=None):
+    attr = METRIC_MAP.get(metric, metric)
 
-    attr = metric_map.get(metric, metric)
+    time_clause = _build_time_clause(since, from_time, to_time, timezone)
 
     nrql_query_string = (
         f"SELECT percentile({attr}, 75) AS '{metric}' "
         f"FROM PageViewTiming "
         f"WHERE pageUrl = '{pageURL}' "
         f"AND deviceType = 'Mobile' "
-        f"SINCE {days_back} days ago"
+        f"{time_clause}"
     )
 
     nrql_query = f"""
@@ -145,10 +162,7 @@ def reassign_to_reporter(work_item_id, reporter_unique_name, auth):
         print(f"DRY_RUN: Skipping reassignment of {work_item_id}")
         return
 
-    patch_url = (
-        f"https://dev.azure.com/{organization}/{project}/_apis/wit/workitems/"
-        f"{work_item_id}?api-version=7.0"
-    )
+    patch_url = f"{AZDO_BASE_URL}/{work_item_id}?api-version=7.0"
 
     patch_payload = [
         {
@@ -177,11 +191,19 @@ def reassign_to_reporter(work_item_id, reporter_unique_name, auth):
     )
 
 
+auth = HTTPBasicAuth("", personal_access_token)
+
+
 # -----------------------------
 # Main processor
 # -----------------------------
-def process_work_items(work_item_ids, days_back=7):
-    auth = HTTPBasicAuth("", personal_access_token)
+def process_work_items(work_item_ids, since=None, from_time=None, to_time=None, timezone=None):
+
+    # Human-friendly window label used in the comment text
+    if from_time and to_time:
+        window_label = f"{from_time} → {to_time}" + (f" ({timezone})" if timezone else "")
+    else:
+        window_label = since or "7 days"
 
     for work_item_id in work_item_ids:
         print(f"\nProcessing Work Item: {work_item_id}")
@@ -189,12 +211,7 @@ def process_work_items(work_item_ids, days_back=7):
         # -----------------------------
         # Fetch work item
         # -----------------------------
-        url_azdo = (
-            f"https://dev.azure.com/{organization}/{project}/_apis/wit/workitems/"
-            f"{work_item_id}?api-version=7.0"
-        )
-
-        response = requests.get(url_azdo, auth=auth)
+        response = requests.get(f"{AZDO_BASE_URL}/{work_item_id}?api-version=7.0", auth=auth)
 
         if response.status_code != 200:
             print("Error fetching work item:", response.status_code, response.text)
@@ -236,7 +253,14 @@ def process_work_items(work_item_ids, days_back=7):
         # -----------------------------
         # Fetch metric value
         # -----------------------------
-        metric_value = get_metric_value(pageURL, metric, days_back)
+        metric_value = get_metric_value(
+            pageURL,
+            metric,
+            since=since,
+            from_time=from_time,
+            to_time=to_time,
+            timezone=timezone,
+        )
 
         if metric_value is None:
             print(f"No data for {metric}")
@@ -260,7 +284,7 @@ def process_work_items(work_item_ids, days_back=7):
             comment_text = (
                 f"{mention_html}: {metric} is within threshold "
                 f"({metric_value:.3f}) as of {current_date}. "
-                f"Observed over last {days_back} days."
+                f"Observed over: {window_label}."
             )
 
             # Reassign
@@ -306,29 +330,14 @@ def process_work_items(work_item_ids, days_back=7):
                 metric,
                 status,
                 metric_value,
-                days_back,
+                window_label,
             )
-
-
-# -----------------------------
-# test_get_url.py
-# -----------------------------
-import requests
-import re
-from requests.auth import HTTPBasicAuth
-
-auth = HTTPBasicAuth("", personal_access_token)
 
 
 def get_work_item_url(work_item_id):
     print(f"\nProcessing Work Item: {work_item_id}")
 
-    url_azdo = (
-        f"https://dev.azure.com/{organization}/{project}/_apis/wit/workitems/"
-        f"{work_item_id}?api-version=7.0"
-    )
-
-    response = requests.get(url_azdo, auth=auth)
+    response = requests.get(f"{AZDO_BASE_URL}/{work_item_id}?api-version=7.0", auth=auth)
 
     if response.status_code != 200:
         print("Error fetching work item:", response.status_code, response.text)
