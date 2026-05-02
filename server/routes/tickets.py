@@ -1,14 +1,12 @@
 import io
 import pandas as pd
-from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Request
+from fastapi import APIRouter, UploadFile, File, Form, HTTPException
 from fastapi.responses import JSONResponse
-from fastapi.templating import Jinja2Templates
 
-from azure_client import get_work_item_url, process_work_items
+from azure_client import get_work_item_url
 from utils import get_status
 
 router = APIRouter()
-templates = Jinja2Templates(directory="templates")
 
 TICKET_COLUMN_VARIANTS = ["ticket_id", "ticketid"]
 
@@ -74,13 +72,3 @@ async def run_script(
 
     return JSONResponse(content=work_items)
 
-
-@router.post("/analyze")
-async def analyze(request: Request, ticket_ids: str = Form(...)):
-    ids = [x.strip() for x in ticket_ids.split(",") if x.strip()]
-    process_work_items(ids)
-    return templates.TemplateResponse(
-        request=request,
-        name="result.html",
-        context={"work_item_ids": ids, "script_result": f"Processed {len(ids)} ticket(s)."},
-    )
