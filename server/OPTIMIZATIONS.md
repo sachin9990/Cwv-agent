@@ -34,8 +34,8 @@
 - [ ] 10. **No startup validation of required environment variables** *(Architecture)*
     If `AZDO_PAT`, `NEWRELIC_API_KEY`, or `NEWRELIC_ACCOUNT_ID` are missing, the app starts without complaint and fails at the first real request with a cryptic error. A FastAPI `lifespan` startup handler that checks all required env vars would catch misconfigured deployments immediately.
 
-- [ ] 11. **`logger.py` runs I/O at import time** *(Architecture)*
-    `os.makedirs` and the initial `json.dump([])` execute the moment `logger.py` is imported — even in dry runs. This should be moved inside `log_issue()` so the directory and file are only created when an issue is actually logged.
+- [x] ~~11. **`logger.py` runs I/O at import time** *(Architecture)*
+    `os.makedirs` and the initial `json.dump([])` execute the moment `logger.py` is imported — even in dry runs. This should be moved inside `log_issue()` so the directory and file are only created when an issue is actually logged.~~
 
 - [x] ~~12. **`/analyze` route is likely dead code** *(Architecture)*
     It uses Jinja2 templates to render `result.html`, which is a server-side rendering pattern. The entire frontend is React — this endpoint is almost certainly never called from the UI. Confirm and remove if unused.~~
@@ -289,9 +289,9 @@ app = FastAPI(lifespan=lifespan)
 
 ---
 
-### 11. Defer `logger.py` I/O to call time
+### ~~11. Defer `logger.py` I/O to call time~~
 
-**File:** `logger.py` — remove all module-level I/O, move it inside `log_issue`
+~~**File:** `logger.py` — remove all module-level I/O, move it inside `log_issue`~~
 
 ```python
 # Before — runs at import time
