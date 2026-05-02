@@ -4,6 +4,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from azure_client import process_work_items, DRY_RUN
+from utils import format_window_label
 
 router = APIRouter()
 
@@ -47,12 +48,7 @@ def comment_and_assign(payload: TicketIdRequest):
         )
 
         today = datetime.now().strftime("%Y-%m-%d")
-        if payload.from_time and payload.to_time:
-            window_label = f"{payload.from_time} → {payload.to_time}"
-            if payload.timezone:
-                window_label += f" ({payload.timezone})"
-        else:
-            window_label = payload.since or "7 days"
+        window_label = format_window_label(payload.since, payload.from_time, payload.to_time, payload.timezone)
 
         metric_label = payload.metric or "Metric"
         value_str = f"{payload.newrelic_value:.3f}" if payload.newrelic_value is not None else "—"

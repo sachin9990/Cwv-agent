@@ -6,7 +6,7 @@ from datetime import datetime
 from dotenv import load_dotenv
 
 from logger import log_issue
-from utils import get_status, build_time_clause
+from utils import get_status, build_time_clause, format_window_label
 
 load_dotenv()
 
@@ -161,10 +161,7 @@ def process_work_items(
     to_time: str | None = None,
     timezone: str | None = None,
 ) -> None:
-    if from_time and to_time:
-        window_label = f"{from_time} → {to_time}" + (f" ({timezone})" if timezone else "")
-    else:
-        window_label = since or "7 days"
+    window_label = format_window_label(since, from_time, to_time, timezone)
 
     for work_item_id in work_item_ids:
         parsed = get_work_item_url(work_item_id)

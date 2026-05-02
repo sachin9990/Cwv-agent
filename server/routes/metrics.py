@@ -2,7 +2,7 @@ from fastapi import APIRouter, Query, HTTPException
 from fastapi.responses import JSONResponse
 
 from azure_client import get_metric_value
-from utils import get_status
+from utils import get_status, format_window_label
 
 router = APIRouter()
 
@@ -29,10 +29,7 @@ def get_metric(
     )
     status = get_status(metric, value) if metric and value is not None else None
 
-    if from_time and to_time:
-        window = f"{from_time} → {to_time}" + (f" ({timezone})" if timezone else "")
-    else:
-        window = since or "7 days"
+    window = format_window_label(since, from_time, to_time, timezone)
 
     return JSONResponse(
         {

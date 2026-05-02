@@ -23,6 +23,20 @@ def get_status(metric: str, value: float) -> str:
     return "Unknown"
 
 
+def format_window_label(
+    since: str | None = None,
+    from_time: str | None = None,
+    to_time: str | None = None,
+    timezone: str | None = None,
+) -> str:
+    if from_time and to_time:
+        label = f"{from_time} → {to_time}"
+        if timezone:
+            label += f" ({timezone})"
+        return label
+    return since or "7 days"
+
+
 def build_time_clause(
     since: str | None = None,
     from_time: str | None = None,

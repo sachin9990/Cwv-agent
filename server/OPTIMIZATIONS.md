@@ -22,8 +22,8 @@
 - [ ] 6. **New Relic GraphQL errors are not checked** *(Correctness)*
    `get_metric_value` only checks `response.status_code != 200`. A GraphQL API always returns HTTP 200, even for errors — the actual error lives in `response.json()["errors"]`. A failed NRQL query silently returns `None` with no indication of why.
 
-- [ ] 7. **Window label construction is duplicated in three places** *(Code Quality)*
-   The logic for building a human-readable window label appears independently in `routes/comments.py`, `azure_client.py::process_work_items`, and `routes/metrics.py`. A `format_window_label` helper in `utils.py` would consolidate this.
+- [x] ~~7. **Window label construction is duplicated in three places** *(Code Quality)*
+   The logic for building a human-readable window label appears independently in `routes/comments.py`, `azure_client.py::process_work_items`, and `routes/metrics.py`. A `format_window_label` helper in `utils.py` would consolidate this.~~
 
 - [x] ~~8. **`process_work_items` re-fetches what `get_work_item_url` already fetches** *(Code Quality)*
    Both functions independently call Azure DevOps, then both extract the title, URL, and metric from the response. `process_work_items` could call `get_work_item_url` internally to remove the duplication.~~
@@ -195,9 +195,9 @@ if "errors" in data:
 
 ---
 
-### 7. Extract `format_window_label` into `utils.py`
+### ~~7. Extract `format_window_label` into `utils.py`~~
 
-**File:** `utils.py` — add the helper
+~~**File:** `utils.py` — add the helper~~
 
 ```python
 def format_window_label(
@@ -214,7 +214,7 @@ def format_window_label(
     return since or "7 days"
 ```
 
-**Files:** `routes/comments.py`, `azure_client.py`, `routes/metrics.py` — replace the duplicated inline logic with a call to `format_window_label(...)`.
+~~**Files:** `routes/comments.py`, `azure_client.py`, `routes/metrics.py` — replace the duplicated inline logic with a call to `format_window_label(...)`.~~
 
 ---
 
