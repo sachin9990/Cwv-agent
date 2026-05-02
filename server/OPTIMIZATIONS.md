@@ -4,14 +4,14 @@
 
 ## Section 1 — Recommendations
 
-- [ ] 1. **Parallelize `/run-script` ticket fetching** *(Performance)*
-   `routes/tickets.py` calls `get_work_item_url` in a `for` loop. Each iteration makes a synchronous HTTP request to Azure DevOps. With many tickets, this is fully sequential. Use `asyncio.gather` to run all requests concurrently.
+- [x] ~~1. **Parallelize `/run-script` ticket fetching** *(Performance)*
+   `routes/tickets.py` calls `get_work_item_url` in a `for` loop. Each iteration makes a synchronous HTTP request to Azure DevOps. With many tickets, this is fully sequential. Use `asyncio.gather` to run all requests concurrently.~~
 
-- [ ] 2. **Replace `requests` with `httpx`** *(Performance)*
-   The entire backend uses the synchronous `requests` library inside `async def` route handlers, blocking the event loop on every outbound HTTP call. Switching to `httpx` with `AsyncClient` would make Azure, New Relic, and PageSpeed calls non-blocking.
+- [x] ~~2. **Replace `requests` with `httpx`** *(Performance)*
+   The entire backend uses the synchronous `requests` library inside `async def` route handlers, blocking the event loop on every outbound HTTP call. Switching to `httpx` with `AsyncClient` would make Azure, New Relic, and PageSpeed calls non-blocking.~~
 
-- [ ] 3. **`/get-metric` is a synchronous route handler** *(Performance)*
-   It is defined as `def get_metric(...)`, not `async def`. FastAPI runs sync handlers in a thread pool, which is fine, but it is inconsistent and will not benefit from the async improvements above until changed.
+- [x] ~~3. **`/get-metric` is a synchronous route handler** *(Performance)*
+   It is defined as `def get_metric(...)`, not `async def`. FastAPI runs sync handlers in a thread pool, which is fine, but it is inconsistent and will not benefit from the async improvements above until changed.~~
 
 - [x] ~~4. **`PAGE_SPEED_KEY` is evaluated at import time** *(Correctness)*
    `PAGE_SPEED_KEY = os.getenv("PAGE_SPEED_INSIGHTS")` in `pagespeed.py` runs when the module is first imported. `load_dotenv()` is only called inside `azure_client.py` — if `pagespeed.py` is imported first the key will be `None` even if `.env` has the value. `load_dotenv()` should be called once at the top of `main.py`, before all route imports.~~
@@ -46,7 +46,7 @@
 
 ---
 
-### 1. Parallelize `/run-script` ticket fetching
+### ~~1. Parallelize `/run-script` ticket fetching~~
 
 **File:** `routes/tickets.py`
 
@@ -80,14 +80,14 @@ work_items = await asyncio.gather(*[_fetch_one(wid) for wid in work_item_ids])
 
 ---
 
-### 2. Replace `requests` with `httpx`
+### ~~2. Replace `requests` with `httpx`~~
 
-**Install:**
+~~**Install:**~~
 ```
 pip install httpx
 ```
 
-**File:** `azure_client.py` — replace all `requests` calls
+~~**File:** `azure_client.py` — replace all `requests` calls~~
 
 ```python
 # Before
@@ -107,9 +107,9 @@ All functions in `azure_client.py` that call `requests.get` / `requests.post` / 
 
 ---
 
-### 3. Make `/get-metric` async
+### ~~3. Make `/get-metric` async~~
 
-**File:** `routes/metrics.py`
+~~**File:** `routes/metrics.py`~~
 
 ```python
 # Before

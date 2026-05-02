@@ -1,7 +1,6 @@
 fastapi
 uvicorn
-jinja2
 python-multipart
 pandas
-requests
+httpx
 python-dotenv

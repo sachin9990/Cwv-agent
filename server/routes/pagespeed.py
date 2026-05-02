@@ -1,5 +1,5 @@
 import os
-import requests
+import httpx
 from typing import Literal
 from fastapi import APIRouter, Query, HTTPException
 from fastapi.responses import JSONResponse
@@ -51,7 +51,7 @@ _METRIC_AUDIT_IDS: dict[str, set[str]] = {
 
 
 @router.get("/get-pagespeed")
-def get_pagespeed(
+async def get_pagespeed(
     url: str = Query(...),
     metric: Literal["LCP", "CLS", "INP"] | None = Query(None, description="CWV metric: LCP, CLS, or INP"),
     strategy: str = Query("mobile"),
@@ -69,27 +69,28 @@ def get_pagespeed(
     psi_endpoint = "https://www.googleapis.com/pagespeedonline/v5/runPagespeed"
 
     resp = None
-    for attempt in range(2):
-        try:
-            resp = requests.get(psi_endpoint, params=params, timeout=60)
-            resp.raise_for_status()
-            break
-        except requests.exceptions.Timeout:
-            if attempt == 1:
+    async with httpx.AsyncClient() as client:
+        for attempt in range(2):
+            try:
+                resp = await client.get(psi_endpoint, params=params, timeout=60.0)
+                resp.raise_for_status()
+                break
+            except httpx.TimeoutException:
+                if attempt == 1:
+                    raise HTTPException(
+                        status_code=504,
+                        detail="PageSpeed Insights request timed out after 2 attempts.",
+                    )
+            except httpx.HTTPStatusError as exc:
                 raise HTTPException(
-                    status_code=504,
-                    detail="PageSpeed Insights request timed out after 2 attempts.",
+                    status_code=502,
+                    detail=f"PageSpeed Insights error: {exc.response.status_code}",
                 )
-        except requests.exceptions.HTTPError as exc:
-            raise HTTPException(
-                status_code=502,
-                detail=f"PageSpeed Insights error: {exc.response.status_code}",
-            )
-        except requests.exceptions.RequestException as exc:
-            raise HTTPException(
-                status_code=502,
-                detail=f"PageSpeed Insights request failed: {str(exc)}",
-            )
+            except httpx.RequestError as exc:
+                raise HTTPException(
+                    status_code=502,
+                    detail=f"PageSpeed Insights request failed: {str(exc)}",
+                )
 
     audits = resp.json().get("lighthouseResult", {}).get("audits", {})
     relevant_ids = _METRIC_AUDIT_IDS.get((metric or "").upper())

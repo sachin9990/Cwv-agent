@@ -1,4 +1,5 @@
 import io
+import asyncio
 import pandas as pd
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException
 from fastapi.responses import JSONResponse
@@ -9,6 +10,21 @@ from utils import get_status
 router = APIRouter()
 
 TICKET_COLUMN_VARIANTS = ["ticket_id", "ticketid"]
+
+
+async def _fetch_one(wid: str) -> dict:
+    parsed = await get_work_item_url(wid)
+    status = None
+    if parsed and parsed["metric"] and parsed["value"] is not None:
+        status = get_status(parsed["metric"], parsed["value"])
+    return {
+        "response_from": "Azure DevOps",
+        "ticket_id": wid,
+        "url": parsed["URL"] if parsed else None,
+        "metric": parsed["metric"] if parsed else None,
+        "value": parsed["value"] if parsed else None,
+        "status": status,
+    }
 
 
 @router.post("/run-script")
@@ -52,23 +68,6 @@ async def run_script(
 
     print("DEBUG work_item_ids:", work_item_ids)
 
-    work_items = []
-    for wid in work_item_ids:
-        parsed = get_work_item_url(wid)
-        status = None
-        if parsed and parsed["metric"] and parsed["value"] is not None:
-            status = get_status(parsed["metric"], parsed["value"])
-
-        work_items.append(
-            {
-                "response_from": "Azure DevOps",
-                "ticket_id": wid,
-                "url": parsed["URL"] if parsed else None,
-                "metric": parsed["metric"] if parsed else None,
-                "value": parsed["value"] if parsed else None,
-                "status": status,
-            }
-        )
+    work_items = list(await asyncio.gather(*[_fetch_one(wid) for wid in work_item_ids]))
 
     return JSONResponse(content=work_items)
-

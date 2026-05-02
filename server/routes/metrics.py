@@ -9,7 +9,7 @@ router = APIRouter()
 
 
 @router.get("/get-metric")
-def get_metric(
+async def get_metric(
     ticket_id: str,
     url: str,
     metric: Literal["LCP", "CLS", "INP"],
@@ -24,7 +24,7 @@ def get_metric(
             detail="from_time and to_time must be supplied together.",
         )
 
-    value = get_metric_value(
+    value = await get_metric_value(
         url, metric,
         since=since, from_time=from_time, to_time=to_time, timezone=timezone,
     )

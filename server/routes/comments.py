@@ -21,7 +21,7 @@ class TicketIdRequest(BaseModel):
 
 
 @router.post("/comment-assign")
-def comment_and_assign(payload: TicketIdRequest):
+async def comment_and_assign(payload: TicketIdRequest):
     if not payload.ticket_id:
         return JSONResponse(
             {"success": False, "message": "No ticket_id provided."},
@@ -39,7 +39,7 @@ def comment_and_assign(payload: TicketIdRequest):
             f"Commenting on {payload.ticket_id} | "
             f"value={payload.newrelic_value}, status={payload.newrelic_status}"
         )
-        process_work_items(
+        await process_work_items(
             [payload.ticket_id],
             since=payload.since,
             from_time=payload.from_time,

@@ -1,7 +1,6 @@
 import re
 import os
-import requests
-from requests.auth import HTTPBasicAuth
+import httpx
 from datetime import datetime
 from logger import log_issue
 from utils import get_status, build_time_clause, format_window_label
@@ -22,10 +21,10 @@ METRIC_MAP = {
     "LCP": "largestContentfulPaint",
 }
 
-auth = HTTPBasicAuth("", personal_access_token)
+_AZDO_AUTH = ("", personal_access_token)
 
 
-def get_metric_value(
+async def get_metric_value(
     page_url: str,
     metric: str,
     since: str | None = None,
@@ -56,12 +55,12 @@ def get_metric_value(
     }}
     """
 
-    response = requests.post(
-        "https://api.newrelic.com/graphql",
-        headers={"Content-Type": "application/json", "API-Key": api_key},
-        json={"query": nrql_query},
-        verify=True,
-    )
+    async with httpx.AsyncClient() as client:
+        response = await client.post(
+            "https://api.newrelic.com/graphql",
+            headers={"Content-Type": "application/json", "API-Key": api_key},
+            json={"query": nrql_query},
+        )
 
     if response.status_code != 200:
         print("Error querying New Relic:", response.status_code, response.text)
@@ -91,12 +90,14 @@ def get_metric_value(
     return None
 
 
-def get_work_item_url(work_item_id: str) -> dict | None:
+async def get_work_item_url(work_item_id: str) -> dict | None:
     print(f"\nProcessing Work Item: {work_item_id}")
 
-    response = requests.get(
-        f"{AZDO_BASE_URL}/{work_item_id}?api-version=7.0", auth=auth
-    )
+    async with httpx.AsyncClient() as client:
+        response = await client.get(
+            f"{AZDO_BASE_URL}/{work_item_id}?api-version=7.0",
+            auth=_AZDO_AUTH,
+        )
 
     if response.status_code != 200:
         print("Error fetching work item:", response.status_code, response.text)
@@ -129,23 +130,24 @@ def get_work_item_url(work_item_id: str) -> dict | None:
     return result
 
 
-def reassign_to_reporter(work_item_id: str, reporter_unique_name: str) -> None:
+async def reassign_to_reporter(work_item_id: str, reporter_unique_name: str) -> None:
     if DRY_RUN:
         print(f"DRY_RUN: Skipping reassignment of {work_item_id}")
         return
 
-    response = requests.patch(
-        f"{AZDO_BASE_URL}/{work_item_id}?api-version=7.0",
-        auth=auth,
-        headers={"Content-Type": "application/json-patch+json"},
-        json=[
-            {
-                "op": "replace",
-                "path": "/fields/System.AssignedTo",
-                "value": reporter_unique_name,
-            }
-        ],
-    )
+    async with httpx.AsyncClient() as client:
+        response = await client.patch(
+            f"{AZDO_BASE_URL}/{work_item_id}?api-version=7.0",
+            auth=_AZDO_AUTH,
+            headers={"Content-Type": "application/json-patch+json"},
+            json=[
+                {
+                    "op": "replace",
+                    "path": "/fields/System.AssignedTo",
+                    "value": reporter_unique_name,
+                }
+            ],
+        )
     response.raise_for_status()
 
     assigned = response.json()["fields"].get("System.AssignedTo", {})
@@ -155,7 +157,7 @@ def reassign_to_reporter(work_item_id: str, reporter_unique_name: str) -> None:
     )
 
 
-def process_work_items(
+async def process_work_items(
     work_item_ids: list[str],
     since: str | None = None,
     from_time: str | None = None,
@@ -165,7 +167,7 @@ def process_work_items(
     window_label = format_window_label(since, from_time, to_time, timezone)
 
     for work_item_id in work_item_ids:
-        parsed = get_work_item_url(work_item_id)
+        parsed = await get_work_item_url(work_item_id)
         if not parsed:
             continue
 
@@ -175,7 +177,7 @@ def process_work_items(
         reporter_descriptor = parsed["reporter_descriptor"]
         reporter_unique_name = parsed["reporter_unique_name"]
 
-        metric_value = get_metric_value(
+        metric_value = await get_metric_value(
             page_url, metric,
             since=since, from_time=from_time, to_time=to_time, timezone=timezone,
         )
@@ -199,7 +201,7 @@ def process_work_items(
             )
 
             if reporter_unique_name:
-                reassign_to_reporter(work_item_id, reporter_unique_name)
+                await reassign_to_reporter(work_item_id, reporter_unique_name)
 
             payload = {
                 "text": comment_text,
@@ -214,12 +216,13 @@ def process_work_items(
                     f"https://dev.azure.com/{organization}/{project}/_apis/wit/"
                     f"workItems/{work_item_id}/comments?api-version=7.0-preview.3"
                 )
-                resp = requests.post(
-                    comment_url,
-                    auth=auth,
-                    headers={"Content-Type": "application/json"},
-                    json=payload,
-                )
+                async with httpx.AsyncClient() as client:
+                    resp = await client.post(
+                        comment_url,
+                        auth=_AZDO_AUTH,
+                        headers={"Content-Type": "application/json"},
+                        json=payload,
+                    )
                 resp.raise_for_status()
                 print("✅ Comment added")
         else:
