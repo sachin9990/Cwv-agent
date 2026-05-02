@@ -307,36 +307,54 @@ html[data-theme="dark"] .bugs-table .value-cell.red {
   align-items: center;
   gap: 6px;
   padding: 7px 14px;
-  border: 1px solid transparent;
+  border: none;
   border-radius: 6px;
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-  transition: opacity 0.15s ease;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, font-size 0.18s ease, padding 0.18s ease;
+}
+
+.action-btn:hover:not(:disabled) {
+  transform: translateY(-2px) scale(1.08);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.22);
+}
+
+.action-btn:active:not(:disabled) {
+  transform: translateY(0) scale(1);
+  box-shadow: none;
 }
 
 .action-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+  animation: none;
+}
+
+@keyframes btn-wave {
+  0%   { background-position: 0% center; }
+  50%  { background-position: 100% center; }
+  100% { background-position: 0% center; }
 }
 
 .action-btn.comment {
-  background: var(--action-comment-bg);
-  color: var(--action-comment-color);
-  border-color: var(--action-comment-border);
+  background: linear-gradient(90deg, #064e3b, #059669, #6ee7b7, #059669, #064e3b);
+  background-size: 300% auto;
+  color: #fff;
+  animation: btn-wave 1.8s ease infinite;
 }
 
-.action-btn.comment:hover:not(:disabled) {
-  opacity: 0.85;
+.action-btn.comment:disabled {
+  background: #6ee7b7;
+  color: #065f46;
+  animation: none;
 }
 
 .action-btn.fix {
-  background: #ef4444;
+  background: linear-gradient(90deg, #7f1d1d, #ef4444, #fca5a5, #ef4444, #7f1d1d);
+  background-size: 300% auto;
   color: #fff;
-}
-
-.action-btn.fix:hover {
-  background: #dc2626;
+  animation: btn-wave 1.8s ease infinite;
 }
 
 .muted {
@@ -407,4 +425,266 @@ html[data-theme="dark"] .bugs-table .value-cell.red {
   cursor: pointer;
   background: var(--select-bg);
   color: var(--text-body);
+}
+
+/* ----------------------------------------
+   PageSpeed Insights expanded row
+---------------------------------------- */
+
+.psi-expanded-row:hover td {
+  background: transparent !important;
+}
+
+.psi-expanded-row > td {
+  padding: 0;
+  border-bottom: 2px solid var(--border);
+}
+
+.psi-panel {
+  padding: 16px 20px;
+  background: var(--bg-elevated);
+  border-top: 1px solid var(--border);
+}
+
+.psi-loading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--text-muted);
+  padding: 8px 0;
+}
+
+.psi-spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--border);
+  border-top-color: #5f4ef1;
+  border-radius: 50%;
+  animation: psi-spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes psi-spin {
+  to { transform: rotate(360deg); }
+}
+
+.psi-error {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  font-size: 13px;
+  padding: 8px 0;
+}
+
+.psi-error-msg {
+  color: #dc2626;
+}
+
+html[data-theme="dark"] .psi-error-msg {
+  color: #fca5a5;
+}
+
+.psi-retry-btn {
+  padding: 5px 12px;
+  border: 1px solid #dc2626;
+  border-radius: 6px;
+  background: transparent;
+  color: #dc2626;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.psi-retry-btn:hover {
+  background: #dc2626;
+  color: #fff;
+}
+
+html[data-theme="dark"] .psi-retry-btn {
+  border-color: #fca5a5;
+  color: #fca5a5;
+}
+
+html[data-theme="dark"] .psi-retry-btn:hover {
+  background: #fca5a5;
+  color: #1f2937;
+}
+
+.psi-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.psi-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.psi-external-link {
+  font-size: 12px;
+  color: #5f4ef1;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.psi-external-link:hover {
+  text-decoration: underline;
+}
+
+.psi-audit-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.psi-audit-item {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 14px;
+  background: var(--bg-card);
+}
+
+.psi-audit-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.psi-score-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 5px;
+  font-size: 11px;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.psi-score--fail {
+  background: #fca5a5;
+  color: #7f1d1d;
+  border: 1.5px solid #991b1b;
+}
+
+.psi-score--warn {
+  background: #fcd34d;
+  color: #78350f;
+  border: 1.5px solid #c2410c;
+}
+
+html[data-theme="dark"] .psi-score--fail {
+  background: rgba(239, 68, 68, 0.3);
+  color: #fca5a5;
+  border-color: #dc2626;
+}
+
+html[data-theme="dark"] .psi-score--warn {
+  background: rgba(245, 158, 11, 0.3);
+  color: #fcd34d;
+  border-color: #d97706;
+}
+
+.psi-audit-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-body);
+  flex: 1;
+}
+
+.psi-display-value {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-style: italic;
+  margin-left: auto;
+}
+
+.psi-audit-desc {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin: 6px 0 0;
+  line-height: 1.5;
+}
+
+.psi-empty {
+  font-size: 13px;
+  color: var(--text-faint);
+  font-style: italic;
+}
+
+.action-btn.fix.fix--active {
+  background: #64748b;
+  color: #fff;
+  animation: none;
+}
+
+.action-btn.fix.fix--active:hover {
+  background: #475569;
+}
+
+/* ----------------------------------------
+   Commented row — green border + message
+---------------------------------------- */
+
+.row--commented td {
+  background: rgba(16, 185, 129, 0.04) !important;
+  border-top: 2px solid #10b981;
+}
+
+.row--commented td:first-child {
+  border-left: 2px solid #10b981;
+  border-radius: 8px 0 0 0;
+}
+
+.row--commented td:last-child {
+  border-right: 2px solid #10b981;
+  border-radius: 0 8px 0 0;
+}
+
+.row--comment-msg td {
+  background: rgba(16, 185, 129, 0.04) !important;
+  border-left: 2px solid #10b981;
+  border-right: 2px solid #10b981;
+  border-bottom: 2px solid #10b981;
+  border-radius: 0 0 8px 8px;
+  padding: 0;
+}
+
+.comment-preview {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  font-size: 13px;
+  color: #065f46;
+}
+
+html[data-theme="dark"] .comment-preview {
+  color: #6ee7b7;
+}
+
+.comment-preview-icon {
+  flex-shrink: 0;
+  font-size: 15px;
+}
+
+.comment-preview-text {
+  font-style: italic;
+  line-height: 1.5;
 }

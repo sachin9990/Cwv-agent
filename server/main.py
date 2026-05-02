@@ -2,6 +2,8 @@
 # Standard library
 # -----------------------------
 import io
+import os
+import requests
 
 # -----------------------------
 # Third-party libraries
@@ -31,6 +33,8 @@ from azureComment import (
     get_metric_value,
     get_status,
 )
+
+PAGE_SPEED_KEY = os.getenv("PAGE_SPEED_INSIGHTS")
 
 # -----------------------------
 # App setup
@@ -222,11 +226,108 @@ def get_metric(
     )
 
 
+# Audit IDs from the Lighthouse report that are directly relevant to each CWV metric
+_METRIC_AUDIT_IDS: dict[str, set[str]] = {
+    "LCP": {
+        "largest-contentful-paint-element",
+        "render-blocking-resources",
+        "unused-css-rules",
+        "unused-javascript",
+        "uses-optimized-images",
+        "uses-text-compression",
+        "server-response-time",
+        "redirects",
+        "uses-responsive-images",
+        "offscreen-images",
+        "unminified-css",
+        "unminified-javascript",
+        "preload-lcp-image",
+        "prioritize-lcp-image",
+        "uses-long-cache-ttl",
+        "total-byte-weight",
+        "critical-request-chains",
+        "efficient-animated-content",
+        "dom-size",
+    },
+    "CLS": {
+        "layout-shift-elements",
+        "non-composited-animations",
+        "unsized-images",
+        "uses-responsive-images",
+        "preload-fonts",
+    },
+    "INP": {
+        "total-blocking-time",
+        "long-tasks",
+        "third-party-summary",
+        "dom-size",
+        "bootup-time",
+        "mainthread-work-breakdown",
+        "uses-passive-event-listeners",
+        "no-document-write",
+        "third-party-facades",
+        "viewport",
+    },
+}
+
+# -----------------------------
+# PageSpeed Insights endpoint
+# -----------------------------
+@app.get("/get-pagespeed")
+def get_pagespeed(
+    url: str = Query(...),
+    metric: str | None = Query(None, description="CWV metric: LCP, CLS, or INP"),
+    strategy: str = Query("mobile"),
+):
+    if not PAGE_SPEED_KEY:
+        raise HTTPException(status_code=500, detail="PAGE_SPEED_INSIGHTS API key not configured.")
+    params = {
+        "url": url,
+        "key": PAGE_SPEED_KEY,
+        "category": "performance",
+        "strategy": strategy,
+    }
+    psi_endpoint = "https://www.googleapis.com/pagespeedonline/v5/runPagespeed"
+    resp = None
+    for attempt in range(2):
+        try:
+            resp = requests.get(psi_endpoint, params=params, timeout=60)
+            resp.raise_for_status()
+            break
+        except requests.exceptions.Timeout:
+            if attempt == 1:
+                raise HTTPException(status_code=504, detail="PageSpeed Insights request timed out after 2 attempts.")
+        except requests.exceptions.HTTPError as exc:
+            raise HTTPException(status_code=502, detail=f"PageSpeed Insights error: {exc.response.status_code}")
+        except requests.exceptions.RequestException as exc:
+            raise HTTPException(status_code=502, detail=f"PageSpeed Insights request failed: {str(exc)}")
+
+    audits = resp.json().get("lighthouseResult", {}).get("audits", {})
+    relevant_ids = _METRIC_AUDIT_IDS.get((metric or "").upper())
+
+    failed = [
+        {
+            "id": v["id"],
+            "title": v.get("title", ""),
+            "description": v.get("description", ""),
+            "score": v["score"],
+            "displayValue": v.get("displayValue", ""),
+        }
+        for v in audits.values()
+        if v.get("score") is not None
+        and v["score"] < 1
+        and (relevant_ids is None or v["id"] in relevant_ids)
+    ]
+    failed.sort(key=lambda a: a["score"])
+    return JSONResponse({"recommendations": failed[:5]})
+
+
 # -----------------------------
 # Request model
 # -----------------------------
 class TicketIdRequest(BaseModel):
     ticket_id: str
+    metric: str | None = None
     newrelic_value: float | None = None
     newrelic_status: str | None = None
     since: str | None = None
@@ -273,10 +374,27 @@ def comment_and_assign(payload: TicketIdRequest):
             timezone=payload.timezone,
         )
 
+        from datetime import datetime as _dt
+        today = _dt.now().strftime("%Y-%m-%d")
+        if payload.from_time and payload.to_time:
+            window_label = f"{payload.from_time} → {payload.to_time}"
+            if payload.timezone:
+                window_label += f" ({payload.timezone})"
+        else:
+            window_label = payload.since or "7 days"
+
+        metric_label = payload.metric or "Metric"
+        value_str = f"{newrelic_value:.3f}" if newrelic_value is not None else "—"
+        comment_preview = (
+            f"{metric_label} is within threshold ({value_str}) as of {today}. "
+            f"Observed over: {window_label}."
+        )
+
         return JSONResponse(
             {
                 "success": True,
                 "message": f"✅ Comment added & reassigned for {ticket_id}",
+                "comment_preview": comment_preview,
             }
         )
 

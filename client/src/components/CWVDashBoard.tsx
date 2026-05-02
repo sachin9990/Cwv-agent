@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import TimeRangePicker, { type TimeRange } from "./TimeRangePicker";
 import "./CWVDashboard.css";
 
@@ -12,6 +12,19 @@ type Row = {
   newRelicStatus?: string | null;
   prevValue?: number | null;
 };
+
+type PsiAudit = {
+  id: string;
+  title: string;
+  description: string;
+  score: number;
+  displayValue: string;
+};
+
+type PsiState =
+  | { status: "loading" }
+  | { status: "error"; message: string }
+  | { status: "done"; audits: PsiAudit[] };
 
 const DEFAULT_RANGE: TimeRange = {
   kind: "relative",
@@ -27,6 +40,8 @@ export default function CWVDashboard({ data }: { data: Row[] }) {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(5);
   const [commentingId, setCommentingId] = useState<string | null>(null);
+  const [psiMap, setPsiMap] = useState<Record<string, PsiState>>({});
+  const [commentMap, setCommentMap] = useState<Record<string, string>>({});
 
   useEffect(() => {
     setRows(data);
@@ -78,6 +93,7 @@ export default function CWVDashboard({ data }: { data: Row[] }) {
     try {
       const body: Record<string, unknown> = {
         ticket_id: row.ticket_id,
+        metric: row.metric ?? null,
         newrelic_value: row.newRelicValue ?? null,
         newrelic_status: row.newRelicStatus ?? null,
       };
@@ -94,7 +110,11 @@ export default function CWVDashboard({ data }: { data: Row[] }) {
         body: JSON.stringify(body),
       });
       const result = await resp.json();
-      alert(result.message ?? (result.success ? "Comment added" : "Failed"));
+      if (result.success && result.comment_preview) {
+        setCommentMap((prev) => ({ ...prev, [row.ticket_id]: result.comment_preview }));
+      } else {
+        alert(result.message ?? "Failed to add comment");
+      }
     } catch (err) {
       alert(`Error: ${err}`);
     } finally {
@@ -102,10 +122,42 @@ export default function CWVDashboard({ data }: { data: Row[] }) {
     }
   };
 
+  const fetchPsi = async (row: Row) => {
+    if (!row.url) return;
+    setPsiMap((prev) => ({ ...prev, [row.ticket_id]: { status: "loading" } }));
+    try {
+      const params = new URLSearchParams({ url: row.url, strategy: "mobile" });
+      if (row.metric) params.set("metric", row.metric);
+      const resp = await fetch(`http://127.0.0.1:8000/get-pagespeed?${params}`);
+      if (!resp.ok) {
+        const errData = await resp.json().catch(() => ({}));
+        throw new Error(errData.detail ?? `HTTP ${resp.status}`);
+      }
+      const data = await resp.json();
+      setPsiMap((prev) => ({
+        ...prev,
+        [row.ticket_id]: { status: "done", audits: data.recommendations },
+      }));
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      setPsiMap((prev) => ({
+        ...prev,
+        [row.ticket_id]: { status: "error", message },
+      }));
+    }
+  };
+
   const handleFix = (row: Row) => {
     if (!row.url) return;
-    const target = `https://pagespeed.web.dev/analysis?url=${encodeURIComponent(row.url)}`;
-    window.open(target, "_blank", "noopener,noreferrer");
+    if (psiMap[row.ticket_id]) {
+      setPsiMap((prev) => {
+        const next = { ...prev };
+        delete next[row.ticket_id];
+        return next;
+      });
+      return;
+    }
+    fetchPsi(row);
   };
 
   // Stats from New Relic responses only
@@ -206,56 +258,151 @@ export default function CWVDashboard({ data }: { data: Row[] }) {
         <tbody>
           {pageRows.length > 0 ? (
             pageRows.map((item) => {
+              const psiState = psiMap[item.ticket_id];
+              const commentText = commentMap[item.ticket_id];
               return (
-                <tr key={item.ticket_id}>
-                  <td className="bug-id">{item.ticket_id}</td>
-                  <td className="url-cell">
-                    {item.url ? (
-                      <a href={item.url} target="_blank" rel="noopener noreferrer">
-                        {item.url}
-                      </a>
-                    ) : (
-                      <span className="url-not-found">URL not found in the given ticket Id</span>
-                    )}
-                  </td>
-                  <td>{item.metric ?? "-"}</td>
-                  <td>
-                    <span className={`value-cell ${item.status?.toLowerCase() ?? ""}`}>
-                      {item.value !== null && item.value !== undefined
-                        ? item.value.toFixed(3)
-                        : "—"}
-                    </span>
-                  </td>
-                  {showNewRelic && (
+                <React.Fragment key={item.ticket_id}>
+                  <tr className={commentText ? "row--commented" : ""}>
+                    <td className="bug-id">{item.ticket_id}</td>
+                    <td className="url-cell">
+                      {item.url ? (
+                        <a href={item.url} target="_blank" rel="noopener noreferrer">
+                          {item.url}
+                        </a>
+                      ) : (
+                        <span className="url-not-found">URL not found in the given ticket Id</span>
+                      )}
+                    </td>
+                    <td>{item.metric ?? "-"}</td>
                     <td>
-                      <span className={`value-cell ${item.newRelicStatus?.toLowerCase() ?? ""}`}>
-                        {item.newRelicValue !== null && item.newRelicValue !== undefined
-                          ? item.newRelicValue.toFixed(3)
+                      <span className={`value-cell ${item.status?.toLowerCase() ?? ""}`}>
+                        {item.value !== null && item.value !== undefined
+                          ? item.value.toFixed(3)
                           : "—"}
                       </span>
                     </td>
-                  )}
-                  <td>
-                    {showNewRelic && item.newRelicStatus === "Green" ? (
-                      <button
-                        className="action-btn comment"
-                        onClick={() => handleComment(item)}
-                        disabled={commentingId === item.ticket_id}
-                      >
-                        💬 {commentingId === item.ticket_id ? "Commenting…" : "Comment"}
-                      </button>
-                    ) : showNewRelic && item.newRelicStatus ? (
-                      <button
-                        className="action-btn fix"
-                        onClick={() => handleFix(item)}
-                      >
-                        🔧 Fix
-                      </button>
-                    ) : (
-                      <span className="muted">—</span>
+                    {showNewRelic && (
+                      <td>
+                        <span className={`value-cell ${item.newRelicStatus?.toLowerCase() ?? ""}`}>
+                          {item.newRelicValue !== null && item.newRelicValue !== undefined
+                            ? item.newRelicValue.toFixed(3)
+                            : "—"}
+                        </span>
+                      </td>
                     )}
-                  </td>
-                </tr>
+                    <td>
+                      {showNewRelic && item.newRelicStatus === "Green" ? (
+                        <button
+                          className="action-btn comment"
+                          onClick={() => handleComment(item)}
+                          disabled={commentingId === item.ticket_id || !!commentText}
+                        >
+                          {commentText ? "✅ Commented" : commentingId === item.ticket_id ? "Commenting…" : "💬 Comment"}
+                        </button>
+                      ) : showNewRelic && item.newRelicStatus ? (
+                        <button
+                          className={`action-btn fix${psiState ? " fix--active" : ""}`}
+                          onClick={() => handleFix(item)}
+                        >
+                          {psiState ? "✕ Close" : "🔧 Fix"}
+                        </button>
+                      ) : (
+                        <span className="muted">—</span>
+                      )}
+                    </td>
+                  </tr>
+
+                  {psiState && (
+                    <tr className="psi-expanded-row">
+                      <td colSpan={showNewRelic ? 6 : 5}>
+                        <div className="psi-panel">
+                          {psiState.status === "loading" && (
+                            <div className="psi-loading">
+                              <span className="psi-spinner" aria-label="Loading" />
+                              Fetching PageSpeed recommendations…
+                            </div>
+                          )}
+
+                          {psiState.status === "error" && (
+                            <div className="psi-error">
+                              <span className="psi-error-msg">
+                                Could not load recommendations: {psiState.message}
+                              </span>
+                              <button
+                                type="button"
+                                className="psi-retry-btn"
+                                onClick={() => fetchPsi(item)}
+                              >
+                                ↺ Try Again
+                              </button>
+                              {item.url && (
+                                <a
+                                  href={`https://pagespeed.web.dev/analysis?url=${encodeURIComponent(item.url)}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="psi-external-link"
+                                >
+                                  Open in PageSpeed Insights ↗
+                                </a>
+                              )}
+                            </div>
+                          )}
+
+                          {psiState.status === "done" && (
+                            <div className="psi-recommendations">
+                              <div className="psi-header">
+                                <span className="psi-title">Top PageSpeed Recommendations</span>
+                                {item.url && (
+                                  <a
+                                    href={`https://pagespeed.web.dev/analysis?url=${encodeURIComponent(item.url)}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="psi-external-link"
+                                  >
+                                    Full report ↗
+                                  </a>
+                                )}
+                              </div>
+                              {psiState.audits.length === 0 ? (
+                                <p className="psi-empty">No failed audits found.</p>
+                              ) : (
+                                <ul className="psi-audit-list">
+                                  {psiState.audits.map((audit) => (
+                                    <li key={audit.id} className="psi-audit-item">
+                                      <div className="psi-audit-header">
+                                        <span className={`psi-score-badge psi-score--${audit.score < 0.5 ? "fail" : "warn"}`}>
+                                          {Math.round(audit.score * 100)}
+                                        </span>
+                                        <span className="psi-audit-title">{audit.title}</span>
+                                        {audit.displayValue && (
+                                          <span className="psi-display-value">{audit.displayValue}</span>
+                                        )}
+                                      </div>
+                                      {audit.description && (
+                                        <p className="psi-audit-desc">{audit.description}</p>
+                                      )}
+                                    </li>
+                                  ))}
+                                </ul>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+
+                  {commentText && (
+                    <tr className="row--comment-msg">
+                      <td colSpan={showNewRelic ? 6 : 5}>
+                        <div className="comment-preview">
+                          <span className="comment-preview-icon">✅</span>
+                          <span className="comment-preview-text">{commentText}</span>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </React.Fragment>
               );
             })
           ) : (
