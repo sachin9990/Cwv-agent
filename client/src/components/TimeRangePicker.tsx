@@ -109,6 +109,7 @@ export default function TimeRangePicker({ value, onChange }: Props) {
       <button
         type="button"
         className="trp-trigger"
+        title="Select time range"
         onClick={() => setOpen((o) => !o)}
       >
         <span className="trp-icon">📅</span>

@@ -16,7 +16,7 @@ type Row = {
 const DEFAULT_RANGE: TimeRange = {
   kind: "relative",
   since: "7 days",
-  label: "Last 7 Days",
+  label: "7 days",
 };
 
 export default function CWVDashboard({ data }: { data: Row[] }) {
