@@ -16,11 +16,11 @@
 - [ ] 4. **`PAGE_SPEED_KEY` is evaluated at import time** *(Correctness)*
    `PAGE_SPEED_KEY = os.getenv("PAGE_SPEED_INSIGHTS")` in `pagespeed.py` runs when the module is first imported. `load_dotenv()` is only called inside `azure_client.py` — if `pagespeed.py` is imported first the key will be `None` even if `.env` has the value. `load_dotenv()` should be called once at the top of `main.py`, before all route imports.
 
-- [ ] 5. **No validation of the `metric` query parameter** *(Correctness)*
-   `/get-metric` and `/get-pagespeed` accept any string for `metric`. Passing an invalid value like `"FCP"` silently returns null data instead of a clear error. Using `Literal["LCP", "CLS", "INP"]` or an `Enum` provides automatic 422 validation and improves the auto-generated API docs.
+- [x] ~~5. **No validation of the `metric` query parameter** *(Correctness)*
+   `/get-metric` and `/get-pagespeed` accept any string for `metric`. Passing an invalid value like `"FCP"` silently returns null data instead of a clear error. Using `Literal["LCP", "CLS", "INP"]` or an `Enum` provides automatic 422 validation and improves the auto-generated API docs.~~
 
-- [ ] 6. **New Relic GraphQL errors are not checked** *(Correctness)*
-   `get_metric_value` only checks `response.status_code != 200`. A GraphQL API always returns HTTP 200, even for errors — the actual error lives in `response.json()["errors"]`. A failed NRQL query silently returns `None` with no indication of why.
+- [x] ~~6. **New Relic GraphQL errors are not checked** *(Correctness)*
+   `get_metric_value` only checks `response.status_code != 200`. A GraphQL API always returns HTTP 200, even for errors — the actual error lives in `response.json()["errors"]`. A failed NRQL query silently returns `None` with no indication of why.~~
 
 - [x] ~~7. **Window label construction is duplicated in three places** *(Code Quality)*
    The logic for building a human-readable window label appears independently in `routes/comments.py`, `azure_client.py::process_work_items`, and `routes/metrics.py`. A `format_window_label` helper in `utils.py` would consolidate this.~~
@@ -153,9 +153,9 @@ Also remove `load_dotenv()` from `azure_client.py` since `main.py` now handles i
 
 ---
 
-### 5. Validate `metric` with a `Literal` type
+### ~~5. Validate `metric` with a `Literal` type~~
 
-**File:** `routes/metrics.py` and `routes/pagespeed.py`
+~~**File:** `routes/metrics.py` and `routes/pagespeed.py`~~
 
 ```python
 # Before
@@ -166,13 +166,13 @@ from typing import Literal
 metric: Literal["LCP", "CLS", "INP"],
 ```
 
-FastAPI will automatically return a 422 error with a clear message if any other value is passed.
+~~FastAPI will automatically return a 422 error with a clear message if any other value is passed.~~
 
 ---
 
-### 6. Check New Relic GraphQL errors
+### ~~6. Check New Relic GraphQL errors~~
 
-**File:** `azure_client.py` — inside `get_metric_value`
+~~**File:** `azure_client.py` — inside `get_metric_value`~~
 
 ```python
 # Before

@@ -1,3 +1,4 @@
+from typing import Literal
 from fastapi import APIRouter, Query, HTTPException
 from fastapi.responses import JSONResponse
 
@@ -11,7 +12,7 @@ router = APIRouter()
 def get_metric(
     ticket_id: str,
     url: str,
-    metric: str,
+    metric: Literal["LCP", "CLS", "INP"],
     since: str | None = Query(None, description="Relative window e.g. '7 days', '30 minutes'"),
     from_time: str | None = Query(None, description="Custom range start, 'YYYY-MM-DD HH:MM:SS'"),
     to_time: str | None = Query(None, description="Custom range end, 'YYYY-MM-DD HH:MM:SS'"),

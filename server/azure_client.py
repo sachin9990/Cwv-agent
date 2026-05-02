@@ -71,8 +71,13 @@ def get_metric_value(
         print("Error querying New Relic:", response.status_code, response.text)
         return None
 
+    data = response.json()
+    if "errors" in data:
+        print("New Relic GraphQL error:", data["errors"])
+        return None
+
     results = (
-        response.json()
+        data
         .get("data", {})
         .get("actor", {})
         .get("account", {})

@@ -1,5 +1,6 @@
 import os
 import requests
+from typing import Literal
 from fastapi import APIRouter, Query, HTTPException
 from fastapi.responses import JSONResponse
 
@@ -54,7 +55,7 @@ _METRIC_AUDIT_IDS: dict[str, set[str]] = {
 @router.get("/get-pagespeed")
 def get_pagespeed(
     url: str = Query(...),
-    metric: str | None = Query(None, description="CWV metric: LCP, CLS, or INP"),
+    metric: Literal["LCP", "CLS", "INP"] | None = Query(None, description="CWV metric: LCP, CLS, or INP"),
     strategy: str = Query("mobile"),
 ):
     if not PAGE_SPEED_KEY:
