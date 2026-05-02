@@ -25,8 +25,8 @@
 - [ ] 7. **Window label construction is duplicated in three places** *(Code Quality)*
    The logic for building a human-readable window label appears independently in `routes/comments.py`, `azure_client.py::process_work_items`, and `routes/metrics.py`. A `format_window_label` helper in `utils.py` would consolidate this.
 
-- [ ] 8. **`process_work_items` re-fetches what `get_work_item_url` already fetches** *(Code Quality)*
-   Both functions independently call Azure DevOps, then both extract the title, URL, and metric from the response. `process_work_items` could call `get_work_item_url` internally to remove the duplication.
+- [x] ~~8. **`process_work_items` re-fetches what `get_work_item_url` already fetches** *(Code Quality)*
+   Both functions independently call Azure DevOps, then both extract the title, URL, and metric from the response. `process_work_items` could call `get_work_item_url` internally to remove the duplication.~~
 
 - [ ] 9. **`DRY_RUN` is a hardcoded constant** *(Architecture)*
    Toggling it requires a code change. It should be driven by an environment variable so it can be controlled through `.env` without touching the code.
@@ -218,9 +218,9 @@ def format_window_label(
 
 ---
 
-### 8. Reuse `get_work_item_url` inside `process_work_items`
+### ~~8. Reuse `get_work_item_url` inside `process_work_items`~~
 
-**File:** `azure_client.py`
+~~**File:** `azure_client.py`~~
 
 ```python
 # Before — process_work_items fetches and parses the work item itself
@@ -230,16 +230,17 @@ title = work_item["fields"]["System.Title"]
 urls = re.findall(r"https?://\S+", title)
 metric = next((key for key in ["CLS", "INP", "LCP"] if key in title), None)
 
-# After — delegate to get_work_item_url for URL/metric extraction,
-# then do a second fetch only for reporter/reassignment fields
-parsed = get_work_item_url(work_item_id)   # reuse existing function
+# After — get_work_item_url expanded to also return reporter fields,
+# process_work_items calls it once and gets everything it needs
+parsed = get_work_item_url(work_item_id)
 if not parsed:
     continue
 page_url = parsed["URL"]
 metric = parsed["metric"]
+reporter_name = parsed["reporter_name"]
+reporter_descriptor = parsed["reporter_descriptor"]
+reporter_unique_name = parsed["reporter_unique_name"]
 ```
-
-Note: `process_work_items` still needs the full work item for reporter fields (`Custom.BugReportedBy`), so it will still make one Azure call — just the URL/metric parsing is no longer duplicated.
 
 ---
 

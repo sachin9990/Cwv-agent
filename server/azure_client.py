@@ -101,7 +101,8 @@ def get_work_item_url(work_item_id: str) -> dict | None:
         print("Error fetching work item:", response.status_code, response.text)
         return None
 
-    title = response.json()["fields"]["System.Title"]
+    work_item = response.json()
+    title = work_item["fields"]["System.Title"]
     print("Title:", title)
 
     match = re.search(
@@ -113,10 +114,15 @@ def get_work_item_url(work_item_id: str) -> dict | None:
         print("❌ URL not found")
         return None
 
+    bug_reporter = work_item["fields"].get("Custom.BugReportedBy", {})
+
     result = {
         "metric": match.group(1),
         "value": float(match.group(2)),
         "URL": match.group(3).strip(),
+        "reporter_name": bug_reporter.get("displayName", "Reporter"),
+        "reporter_descriptor": bug_reporter.get("descriptor", ""),
+        "reporter_unique_name": bug_reporter.get("uniqueName", ""),
     }
     print("Extracted:", result)
     return result
@@ -161,36 +167,15 @@ def process_work_items(
         window_label = since or "7 days"
 
     for work_item_id in work_item_ids:
-        print(f"\nProcessing Work Item: {work_item_id}")
-
-        response = requests.get(
-            f"{AZDO_BASE_URL}/{work_item_id}?api-version=7.0", auth=auth
-        )
-        if response.status_code != 200:
-            print("Error fetching work item:", response.status_code, response.text)
+        parsed = get_work_item_url(work_item_id)
+        if not parsed:
             continue
 
-        work_item = response.json()
-        title = work_item["fields"]["System.Title"]
-
-        bug_reporter = work_item["fields"].get("Custom.BugReportedBy", {})
-        reporter_name = bug_reporter.get("displayName", "Reporter")
-        reporter_descriptor = bug_reporter.get("descriptor", "")
-        reporter_unique_name = bug_reporter.get("uniqueName", "")
-
-        urls = re.findall(r"https?://\S+", title)
-        if not urls:
-            print("❌ No URL found in title")
-            continue
-        page_url = urls[0]
-        print(f"Extracted URL: {page_url}")
-
-        metric = next(
-            (key for key in ["CLS", "INP", "LCP"] if key in title), None
-        )
-        if not metric:
-            print("❌ No CLS/INP/LCP found")
-            continue
+        page_url = parsed["URL"]
+        metric = parsed["metric"]
+        reporter_name = parsed["reporter_name"]
+        reporter_descriptor = parsed["reporter_descriptor"]
+        reporter_unique_name = parsed["reporter_unique_name"]
 
         metric_value = get_metric_value(
             page_url, metric,
