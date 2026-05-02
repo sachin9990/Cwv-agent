@@ -3,12 +3,8 @@ import os
 import requests
 from requests.auth import HTTPBasicAuth
 from datetime import datetime
-from dotenv import load_dotenv
-
 from logger import log_issue
 from utils import get_status, build_time_clause, format_window_label
-
-load_dotenv()
 
 organization = os.getenv("AZDO_ORG")
 project = os.getenv("AZDO_PROJECT")

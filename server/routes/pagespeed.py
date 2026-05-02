@@ -6,8 +6,6 @@ from fastapi.responses import JSONResponse
 
 router = APIRouter()
 
-PAGE_SPEED_KEY = os.getenv("PAGE_SPEED_INSIGHTS")
-
 _METRIC_AUDIT_IDS: dict[str, set[str]] = {
     "LCP": {
         "largest-contentful-paint-element",
@@ -58,12 +56,13 @@ def get_pagespeed(
     metric: Literal["LCP", "CLS", "INP"] | None = Query(None, description="CWV metric: LCP, CLS, or INP"),
     strategy: str = Query("mobile"),
 ):
-    if not PAGE_SPEED_KEY:
+    page_speed_key = os.getenv("PAGE_SPEED_INSIGHTS")
+    if not page_speed_key:
         raise HTTPException(status_code=500, detail="PAGE_SPEED_INSIGHTS API key not configured.")
 
     params = {
         "url": url,
-        "key": PAGE_SPEED_KEY,
+        "key": page_speed_key,
         "category": "performance",
         "strategy": strategy,
     }

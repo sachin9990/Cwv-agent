@@ -13,8 +13,8 @@
 - [ ] 3. **`/get-metric` is a synchronous route handler** *(Performance)*
    It is defined as `def get_metric(...)`, not `async def`. FastAPI runs sync handlers in a thread pool, which is fine, but it is inconsistent and will not benefit from the async improvements above until changed.
 
-- [ ] 4. **`PAGE_SPEED_KEY` is evaluated at import time** *(Correctness)*
-   `PAGE_SPEED_KEY = os.getenv("PAGE_SPEED_INSIGHTS")` in `pagespeed.py` runs when the module is first imported. `load_dotenv()` is only called inside `azure_client.py` — if `pagespeed.py` is imported first the key will be `None` even if `.env` has the value. `load_dotenv()` should be called once at the top of `main.py`, before all route imports.
+- [x] ~~4. **`PAGE_SPEED_KEY` is evaluated at import time** *(Correctness)*
+   `PAGE_SPEED_KEY = os.getenv("PAGE_SPEED_INSIGHTS")` in `pagespeed.py` runs when the module is first imported. `load_dotenv()` is only called inside `azure_client.py` — if `pagespeed.py` is imported first the key will be `None` even if `.env` has the value. `load_dotenv()` should be called once at the top of `main.py`, before all route imports.~~
 
 - [x] ~~5. **No validation of the `metric` query parameter** *(Correctness)*
    `/get-metric` and `/get-pagespeed` accept any string for `metric`. Passing an invalid value like `"FCP"` silently returns null data instead of a clear error. Using `Literal["LCP", "CLS", "INP"]` or an `Enum` provides automatic 422 validation and improves the auto-generated API docs.~~
@@ -122,9 +122,9 @@ async def get_metric(...):
 
 ---
 
-### 4. Centralize `load_dotenv()` and fix `PAGE_SPEED_KEY`
+### ~~4. Centralize `load_dotenv()` and fix `PAGE_SPEED_KEY`~~
 
-**File:** `main.py` — add `load_dotenv()` before all route imports
+~~**File:** `main.py` — add `load_dotenv()` before all route imports~~
 
 ```python
 # Add at the very top of main.py, before any local imports
@@ -135,7 +135,7 @@ from routes.tickets import router as tickets_router
 # ... rest of imports
 ```
 
-**File:** `routes/pagespeed.py` — remove module-level key read, read it inside the handler
+~~**File:** `routes/pagespeed.py` — remove module-level key read, read it inside the handler~~
 
 ```python
 # Before (module level)
@@ -149,7 +149,7 @@ def get_pagespeed(...):
         raise HTTPException(status_code=500, detail="PAGE_SPEED_INSIGHTS API key not configured.")
 ```
 
-Also remove `load_dotenv()` from `azure_client.py` since `main.py` now handles it.
+~~Also remove `load_dotenv()` from `azure_client.py` since `main.py` now handles it.~~
 
 ---
 
