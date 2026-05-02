@@ -119,8 +119,6 @@ def get_metric_value(pageURL, metric, since=None, from_time=None, to_time=None, 
         "API-Key": api_key,
     }
 
-    print("Query--------------------------->",nrql_query)
-
     response_nr = requests.post(
         "https://api.newrelic.com/graphql",
         headers=headers,
@@ -134,7 +132,6 @@ def get_metric_value(pageURL, metric, since=None, from_time=None, to_time=None, 
 
     data = response_nr.json()
 
-    print(f"----------------------------->NRQL Query Result for {metric} on {pageURL}:", data)
     results = (
         data.get("data", {})
         .get("actor", {})

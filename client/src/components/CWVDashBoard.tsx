@@ -227,10 +227,8 @@ export default function CWVDashboard({ data }: { data: Row[] }) {
             <th>Bug ID</th>
             <th>Title</th>
             <th>Parameter</th>
-            <th>
-              Actual Value
-              <div className="th-sub">(vs Previous {range.label})</div>
-            </th>
+            <th>Metric Value from Azure</th>
+            {showNewRelic && <th>Value from New Relic</th>}
             <th>Status</th>
             <th>Action</th>
           </tr>
@@ -238,7 +236,6 @@ export default function CWVDashboard({ data }: { data: Row[] }) {
         <tbody>
           {pageRows.length > 0 ? (
             pageRows.map((item) => {
-              const displayValue = showNewRelic ? item.newRelicValue : item.value;
               const displayStatus = showNewRelic ? item.newRelicStatus : item.status;
               return (
                 <tr key={item.ticket_id}>
@@ -262,14 +259,21 @@ export default function CWVDashboard({ data }: { data: Row[] }) {
                     )}
                   </td>
                   <td>
-                    <span className={`value-cell ${displayStatus?.toLowerCase() ?? ""}`}>
-                      {displayValue !== null && displayValue !== undefined
-                        ? typeof displayValue === "number"
-                          ? displayValue.toFixed(3)
-                          : displayValue
+                    <span className={`value-cell amber`}>
+                      {item.value !== null && item.value !== undefined
+                        ? item.value.toFixed(3)
                         : "—"}
                     </span>
                   </td>
+                  {showNewRelic && (
+                    <td>
+                      <span className={`value-cell ${item.newRelicStatus?.toLowerCase() ?? ""}`}>
+                        {item.newRelicValue !== null && item.newRelicValue !== undefined
+                          ? item.newRelicValue.toFixed(3)
+                          : "—"}
+                      </span>
+                    </td>
+                  )}
                   <td>{statusChip(displayStatus)}</td>
                   <td>
                     {showNewRelic && item.newRelicStatus === "Green" ? (
@@ -296,7 +300,7 @@ export default function CWVDashboard({ data }: { data: Row[] }) {
             })
           ) : (
             <tr>
-              <td colSpan={6} className="empty">
+              <td colSpan={showNewRelic ? 7 : 6} className="empty">
                 No data — analyze tickets above to populate the dashboard.
               </td>
             </tr>

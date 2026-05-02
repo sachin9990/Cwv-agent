@@ -281,18 +281,27 @@
   color: #5b21b6;
 }
 
-.value-cell {
+.bugs-table .value-cell {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 6px;
   font-weight: 600;
   color: #1f2937;
 }
 
-.value-cell.green {
-  color: #047857;
+.bugs-table .value-cell.green {
+  background: #d1fae5;
+  color: #065f46;
 }
 
-.value-cell.amber,
-.value-cell.red {
-  color: #b91c1c;
+.bugs-table .value-cell.amber {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.bugs-table .value-cell.red {
+  background: #fee2e2;
+  color: #991b1b;
 }
 
 .status-cell {
