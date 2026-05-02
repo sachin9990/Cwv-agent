@@ -23,7 +23,6 @@ export default function CWVDashboard({ data }: { data: Row[] }) {
   const [rows, setRows] = useState<Row[]>(data);
   const [showNewRelic, setShowNewRelic] = useState(false);
   const [range, setRange] = useState<TimeRange>(DEFAULT_RANGE);
-  const [tz, setTz] = useState<string>("Asia/Kolkata");
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(5);
@@ -126,19 +125,6 @@ export default function CWVDashboard({ data }: { data: Row[] }) {
   const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
   const pageRows = rows.slice((page - 1) * pageSize, page * pageSize);
 
-  const statusChip = (status: string | null | undefined) => {
-    if (!status) return <span className="status-cell">—</span>;
-    const cls =
-      status === "Green" ? "good" : status === "Amber" ? "warning" : "critical";
-    const label =
-      status === "Green" ? "Good" : status === "Amber" ? "Needs Fix" : "Critical";
-    return (
-      <span className={`status-cell ${cls}`}>
-        <span className={`status-dot ${cls}`} />
-        {label}
-      </span>
-    );
-  };
 
   return (
     <div className="dashboard-card" id="dashboard">
@@ -148,22 +134,6 @@ export default function CWVDashboard({ data }: { data: Row[] }) {
           <p className="dashboard-subtitle">
             Overview of Core Web Vitals issues for your tickets
           </p>
-        </div>
-        <div className="dashboard-controls">
-          <TimeRangePicker value={range} onChange={setRange} />
-          <div className="tz-pill">
-            <span className="tz-icon">🌐</span>
-            <select
-              className="tz-select"
-              value={tz}
-              onChange={(e) => setTz(e.target.value)}
-            >
-              <option value="Asia/Kolkata">Time Zone: Asia/Kolkata</option>
-              <option value="Etc/UTC">Time Zone: Etc/UTC</option>
-              <option value="America/New_York">Time Zone: America/New_York</option>
-              <option value="Europe/London">Time Zone: Europe/London</option>
-            </select>
-          </div>
         </div>
       </div>
 
@@ -212,6 +182,7 @@ export default function CWVDashboard({ data }: { data: Row[] }) {
       </div>
 
       <div className="dashboard-toolbar">
+        <TimeRangePicker value={range} onChange={setRange} />
         <button
           className="get-data-btn"
           onClick={handleGetData}
@@ -229,37 +200,27 @@ export default function CWVDashboard({ data }: { data: Row[] }) {
             <th>Parameter</th>
             <th>Metric Value from Azure</th>
             {showNewRelic && <th>Value from New Relic</th>}
-            <th>Status</th>
             <th>Action</th>
           </tr>
         </thead>
         <tbody>
           {pageRows.length > 0 ? (
             pageRows.map((item) => {
-              const displayStatus = showNewRelic ? item.newRelicStatus : item.status;
               return (
                 <tr key={item.ticket_id}>
-                  <td className="bug-id">
+                  <td className="bug-id">{item.ticket_id}</td>
+                  <td className="url-cell">
                     {item.url ? (
                       <a href={item.url} target="_blank" rel="noopener noreferrer">
-                        {item.ticket_id}
+                        {item.url}
                       </a>
                     ) : (
-                      item.ticket_id
+                      <span className="url-not-found">URL not found in the given ticket Id</span>
                     )}
                   </td>
-                  <td>{item.url ?? "-"}</td>
+                  <td>{item.metric ?? "-"}</td>
                   <td>
-                    {item.metric ? (
-                      <span className={`param-chip ${item.metric.toLowerCase()}`}>
-                        {item.metric}
-                      </span>
-                    ) : (
-                      "-"
-                    )}
-                  </td>
-                  <td>
-                    <span className={`value-cell amber`}>
+                    <span className={`value-cell ${item.status?.toLowerCase() ?? ""}`}>
                       {item.value !== null && item.value !== undefined
                         ? item.value.toFixed(3)
                         : "—"}
@@ -274,7 +235,6 @@ export default function CWVDashboard({ data }: { data: Row[] }) {
                       </span>
                     </td>
                   )}
-                  <td>{statusChip(displayStatus)}</td>
                   <td>
                     {showNewRelic && item.newRelicStatus === "Green" ? (
                       <button
@@ -300,7 +260,7 @@ export default function CWVDashboard({ data }: { data: Row[] }) {
             })
           ) : (
             <tr>
-              <td colSpan={showNewRelic ? 7 : 6} className="empty">
+              <td colSpan={showNewRelic ? 6 : 5} className="empty">
                 No data — analyze tickets above to populate the dashboard.
               </td>
             </tr>

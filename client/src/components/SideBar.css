@@ -1,14 +1,15 @@
 .sidebar {
   width: 240px;
   min-height: 100vh;
-  background: #fff;
-  border-right: 1px solid #e5e7eb;
+  background: var(--bg-card);
+  border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
   padding: 20px 16px;
   position: sticky;
   top: 0;
   align-self: flex-start;
+  transition: background-color 0.25s ease, border-color 0.25s ease;
 }
 
 .sidebar-header {
@@ -16,7 +17,7 @@
   align-items: center;
   gap: 10px;
   padding: 4px 8px 24px;
-  border-bottom: 1px solid #f3f4f6;
+  border-bottom: 1px solid var(--border-subtle);
   margin-bottom: 16px;
 }
 
@@ -37,7 +38,7 @@
   margin: 0;
   font-size: 18px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--text-primary);
 }
 
 .menu {
@@ -57,20 +58,26 @@
   padding: 10px 12px;
   border-radius: 8px;
   cursor: pointer;
-  color: #6b7280;
+  color: var(--text-muted);
   font-size: 14px;
   transition: background 0.15s ease, color 0.15s ease;
 }
 
 .menu-item:hover {
-  background: #f3f4f6;
-  color: #374151;
+  background: var(--bg-subtle);
+  color: var(--text-body);
 }
 
 .menu-item.active {
   background: #ede9fe;
   color: #5b21b6;
   font-weight: 600;
+}
+
+.menu-item.disabled {
+  cursor: default;
+  opacity: 0.45;
+  pointer-events: none;
 }
 
 .menu-icon {
@@ -82,8 +89,31 @@
   font-weight: 500;
 }
 
+.theme-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 9px 12px;
+  margin-bottom: 12px;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.theme-toggle:hover {
+  background: var(--border);
+  color: var(--text-primary);
+}
+
 .sidebar-promo {
-  margin-top: 16px;
+  margin-top: 0;
   background: linear-gradient(135deg, #1e1e3f 0%, #2d2d5f 100%);
   color: #fff;
   border-radius: 12px;

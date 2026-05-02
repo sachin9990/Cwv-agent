@@ -352,7 +352,7 @@ def get_work_item_url(work_item_id):
     )
 
     if not match:
-        print("❌ Could not parse data")
+        print("❌ URL not found")
         return None
 
     result = {

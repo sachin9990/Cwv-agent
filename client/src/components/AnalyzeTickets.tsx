@@ -67,13 +67,6 @@ export default function AnalyzeTickets({ onResult }: AnalyzeTicketsProps) {
       });
       const data = await response.json();
       if (onResult) onResult(data);
-
-      // Auto-scroll to dashboard once data is back
-      setTimeout(() => {
-        document
-          .getElementById("dashboard")
-          ?.scrollIntoView({ behavior: "smooth", block: "start" });
-      }, 100);
     } catch (err) {
       console.error("Error submitting form:", err);
       alert("Failed to analyze tickets. Is the backend running on port 8000?");
@@ -85,7 +78,7 @@ export default function AnalyzeTickets({ onResult }: AnalyzeTicketsProps) {
   const canSubmit = ticketInput.trim().length > 0 || fileName.length > 0;
 
   return (
-    <section className="analyze-section" id="analyze">
+    <section className="analyze-section">
       <div className="analyze-hero">
         <h1 className="hero-title">
           Let's analyze your{" "}

@@ -1,14 +1,15 @@
 .app-root {
   display: flex;
   min-height: 100vh;
-  background: #f6f8fa;
+  background: var(--bg-app);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
     Arial, sans-serif;
-  color: #1f2937;
+  color: var(--text-body);
+  transition: background-color 0.25s ease;
 }
 
 .main-content {
   flex: 1;
   min-width: 0;
-  padding: 24px 0 60px;
+  padding: 0;
 }

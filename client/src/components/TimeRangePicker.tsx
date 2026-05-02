@@ -52,15 +52,13 @@ export default function TimeRangePicker({ value, onChange }: Props) {
 
   const initialFrom = value.kind === "custom" ? value.from : "";
   const initialTo = value.kind === "custom" ? value.to : "";
-  const initialTz = value.kind === "custom" ? value.timezone : "Etc/UTC";
-
   const [fromDate, setFromDate] = useState(initialFrom.split(" ")[0] || fiveMinutesAgoIso().date);
   const [fromTime, setFromTime] = useState(
     initialFrom.split(" ")[1]?.slice(0, 5) || fiveMinutesAgoIso().time,
   );
   const [toDate, setToDate] = useState(initialTo.split(" ")[0] || nowIso().date);
   const [toTime, setToTime] = useState(initialTo.split(" ")[1]?.slice(0, 5) || nowIso().time);
-  const [timezone, setTimezone] = useState(initialTz);
+  const timezone = "Asia/Kolkata";
 
   // Close popover on outside click
   useEffect(() => {
@@ -119,7 +117,7 @@ export default function TimeRangePicker({ value, onChange }: Props) {
       </button>
 
       {open && (
-        <div className="trp-popover">
+        <div className={`trp-popover${showCustom ? " trp-popover--wide" : ""}`}>
           <div className="trp-rail">
             <div className="trp-rail-heading">Default</div>
             <ul>
@@ -185,34 +183,21 @@ export default function TimeRangePicker({ value, onChange }: Props) {
                 />
               </div>
 
-              <div className="trp-tz-row">
-                <select
-                  className="trp-tz"
-                  value={timezone}
-                  onChange={(e) => setTimezone(e.target.value)}
+              <div className="trp-actions-row">
+                <button
+                  type="button"
+                  className="trp-btn trp-btn-ghost"
+                  onClick={() => setOpen(false)}
                 >
-                  <option value="Etc/UTC">Etc/UTC</option>
-                  <option value="Asia/Kolkata">Asia/Kolkata</option>
-                  <option value="America/New_York">America/New_York</option>
-                  <option value="Europe/London">Europe/London</option>
-                  <option value="Asia/Tokyo">Asia/Tokyo</option>
-                </select>
-                <div className="trp-actions">
-                  <button
-                    type="button"
-                    className="trp-btn trp-btn-ghost"
-                    onClick={() => setOpen(false)}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="button"
-                    className="trp-btn trp-btn-primary"
-                    onClick={applyCustom}
-                  >
-                    Apply
-                  </button>
-                </div>
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="trp-btn trp-btn-primary"
+                  onClick={applyCustom}
+                >
+                  Apply
+                </button>
               </div>
 
               <div className="trp-recent">
