@@ -34,8 +34,12 @@ function App() {
         onNavigate={setPage}
       />
       <main className="main-content">
-        {page === "analyze" && <AnalyzeTickets onResult={handleResult} />}
-        {page === "dashboard" && <CWVDashboard data={dashboardData} />}
+        <div style={{ display: page === "analyze" ? "contents" : "none" }}>
+          <AnalyzeTickets onResult={handleResult} />
+        </div>
+        <div style={{ display: page === "dashboard" ? "contents" : "none" }}>
+          <CWVDashboard data={dashboardData} />
+        </div>
       </main>
     </div>
   );

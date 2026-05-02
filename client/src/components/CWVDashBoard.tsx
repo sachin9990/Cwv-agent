@@ -251,7 +251,7 @@ export default function CWVDashboard({ data }: { data: Row[] }) {
             <th>Title</th>
             <th>Parameter</th>
             <th>Metric Value from Azure</th>
-            {showNewRelic && <th>Value from New Relic</th>}
+            {showNewRelic && <th>Value from New Relic (Mobile)</th>}
             <th>Action</th>
           </tr>
         </thead>
