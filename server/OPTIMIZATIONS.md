@@ -28,11 +28,11 @@
 - [x] ~~8. **`process_work_items` re-fetches what `get_work_item_url` already fetches** *(Code Quality)*
    Both functions independently call Azure DevOps, then both extract the title, URL, and metric from the response. `process_work_items` could call `get_work_item_url` internally to remove the duplication.~~
 
-- [ ] 9. **`DRY_RUN` is a hardcoded constant** *(Architecture)*
-   Toggling it requires a code change. It should be driven by an environment variable so it can be controlled through `.env` without touching the code.
+- [x] ~~9. **`DRY_RUN` is a hardcoded constant** *(Architecture)*
+   Toggling it requires a code change. It should be driven by an environment variable so it can be controlled through `.env` without touching the code.~~
 
-- [ ] 10. **No startup validation of required environment variables** *(Architecture)*
-    If `AZDO_PAT`, `NEWRELIC_API_KEY`, or `NEWRELIC_ACCOUNT_ID` are missing, the app starts without complaint and fails at the first real request with a cryptic error. A FastAPI `lifespan` startup handler that checks all required env vars would catch misconfigured deployments immediately.
+- [x] ~~10. **No startup validation of required environment variables** *(Architecture)*
+    If `AZDO_PAT`, `NEWRELIC_API_KEY`, or `NEWRELIC_ACCOUNT_ID` are missing, the app starts without complaint and fails at the first real request with a cryptic error. A FastAPI `lifespan` startup handler that checks all required env vars would catch misconfigured deployments immediately.~~
 
 - [x] ~~11. **`logger.py` runs I/O at import time** *(Architecture)*
     `os.makedirs` and the initial `json.dump([])` execute the moment `logger.py` is imported — even in dry runs. This should be moved inside `log_issue()` so the directory and file are only created when an issue is actually logged.~~
@@ -244,9 +244,9 @@ reporter_unique_name = parsed["reporter_unique_name"]
 
 ---
 
-### 9. Make `DRY_RUN` an environment variable
+### ~~9. Make `DRY_RUN` an environment variable~~
 
-**File:** `azure_client.py`
+~~**File:** `azure_client.py`~~
 
 ```python
 # Before
@@ -256,16 +256,16 @@ DRY_RUN = True
 DRY_RUN = os.getenv("DRY_RUN", "true").lower() == "true"
 ```
 
-**File:** `.env`
+~~**File:** `.env`~~
 ```
 DRY_RUN=true
 ```
 
 ---
 
-### 10. Add startup env var validation via `lifespan`
+### ~~10. Add startup env var validation via `lifespan`~~
 
-**File:** `main.py`
+~~**File:** `main.py`~~
 
 ```python
 from contextlib import asynccontextmanager

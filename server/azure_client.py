@@ -13,7 +13,7 @@ AZDO_BASE_URL = f"https://dev.azure.com/{organization}/{project}/_apis/wit/worki
 account_id = os.getenv("NEWRELIC_ACCOUNT_ID")
 api_key = os.getenv("NEWRELIC_API_KEY")
 
-DRY_RUN = True  # Set to False to enable actual Azure DevOps writes
+DRY_RUN = os.getenv("DRY_RUN", "true").lower() == "true"
 
 METRIC_MAP = {
     "CLS": "cumulativeLayoutShift",
