@@ -51,6 +51,11 @@ export default function AnalyzeTickets({ onResult }: AnalyzeTicketsProps) {
     }
   };
 
+  const handleRemoveFile = () => {
+    setFileName("");
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
   const handleSubmit = async () => {
     if (!ticketInput.trim() && !fileInputRef.current?.files?.[0]) return;
 
@@ -138,27 +143,36 @@ export default function AnalyzeTickets({ onResult }: AnalyzeTicketsProps) {
                 <p>Upload a CSV file with ticket URLs</p>
               </div>
             </div>
-            <div
-              className="dropzone"
-              onClick={() => fileInputRef.current?.click()}
-              onDragOver={handleDragOver}
-              onDrop={handleDrop}
-            >
-              <div className="dropzone-icon">☁️</div>
-              <p className="dropzone-main">Drag and drop your CSV file here</p>
-              <p>
-                or <span className="browse">browse files</span>
-              </p>
-              <input
-                type="file"
-                accept=".csv,.xlsx,.xls"
-                ref={fileInputRef}
-                style={{ display: "none" }}
-                onChange={handleFileChange}
-              />
-              {fileName && <p className="selected">Selected: {fileName}</p>}
-            </div>
-            <div className="hint">Supported format: .csv ⓘ</div>
+
+            <input
+              type="file"
+              accept=".csv,.xlsx,.xls"
+              ref={fileInputRef}
+              style={{ display: "none" }}
+              onChange={handleFileChange}
+            />
+
+            {fileName ? (
+              <div className="file-pill">
+                <span className="file-pill-icon">📄</span>
+                <span className="file-pill-name">{fileName}</span>
+                <button className="file-pill-remove" onClick={handleRemoveFile} title="Remove file">✕</button>
+              </div>
+            ) : (
+              <>
+                <div
+                  className="dropzone"
+                  onClick={() => fileInputRef.current?.click()}
+                  onDragOver={handleDragOver}
+                  onDrop={handleDrop}
+                >
+                  <div className="dropzone-icon">☁️</div>
+                  <p className="dropzone-main">Drag and drop your CSV file here</p>
+                  <p>or <span className="browse">browse files</span></p>
+                </div>
+                <div className="hint">Supported format: .csv, .xlsx ⓘ</div>
+              </>
+            )}
           </div>
         </div>
 

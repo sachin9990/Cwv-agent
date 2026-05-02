@@ -39,13 +39,25 @@ async def comment_and_assign(payload: TicketIdRequest):
             f"Commenting on {payload.ticket_id} | "
             f"value={payload.newrelic_value}, status={payload.newrelic_status}"
         )
-        await process_work_items(
+        has_cwv_data = await process_work_items(
             [payload.ticket_id],
             since=payload.since,
             from_time=payload.from_time,
             to_time=payload.to_time,
             timezone=payload.timezone,
         )
+
+        if not has_cwv_data:
+            return JSONResponse(
+                {
+                    "success": False,
+                    "message": (
+                        f"Ticket {payload.ticket_id} does not contain a CWV metric (LCP/CLS/INP) "
+                        f"or a URL in its title. Cannot comment on non-CWV tickets."
+                    ),
+                },
+                status_code=400,
+            )
 
         today = datetime.now().strftime("%Y-%m-%d")
         window_label = format_window_label(payload.since, payload.from_time, payload.to_time, payload.timezone)

@@ -60,6 +60,7 @@ async def get_metric_value(
             "https://api.newrelic.com/graphql",
             headers={"Content-Type": "application/json", "API-Key": api_key},
             json={"query": nrql_query},
+            timeout=30.0,
         )
 
     if response.status_code != 200:
@@ -97,6 +98,7 @@ async def get_work_item_url(work_item_id: str) -> dict | None:
         response = await client.get(
             f"{AZDO_BASE_URL}/{work_item_id}?api-version=7.0",
             auth=_AZDO_AUTH,
+            timeout=30.0,
         )
 
     if response.status_code != 200:
@@ -147,6 +149,7 @@ async def reassign_to_reporter(work_item_id: str, reporter_unique_name: str) -> 
                     "value": reporter_unique_name,
                 }
             ],
+            timeout=30.0,
         )
     response.raise_for_status()
 
@@ -163,13 +166,18 @@ async def process_work_items(
     from_time: str | None = None,
     to_time: str | None = None,
     timezone: str | None = None,
-) -> None:
+) -> bool:
+    """Returns True if at least one ticket contained valid CWV data and was processed."""
     window_label = format_window_label(since, from_time, to_time, timezone)
+    found_cwv_data = False
 
     for work_item_id in work_item_ids:
         parsed = await get_work_item_url(work_item_id)
         if not parsed:
+            print(f"⚠️ Ticket {work_item_id} has no CWV metric or URL in its title — skipping.")
             continue
+
+        found_cwv_data = True
 
         page_url = parsed["URL"]
         metric = parsed["metric"]
@@ -222,9 +230,12 @@ async def process_work_items(
                         auth=_AZDO_AUTH,
                         headers={"Content-Type": "application/json"},
                         json=payload,
+                        timeout=30.0,
                     )
                 resp.raise_for_status()
                 print("✅ Comment added")
         else:
             print(f"❌ Not Green → Logging issue")
             log_issue(work_item_id, page_url, metric, status, metric_value, window_label)
+
+    return found_cwv_data

@@ -68,7 +68,6 @@ async def get_pagespeed(
     }
     psi_endpoint = "https://www.googleapis.com/pagespeedonline/v5/runPagespeed"
 
-    resp = None
     async with httpx.AsyncClient() as client:
         for attempt in range(2):
             try:

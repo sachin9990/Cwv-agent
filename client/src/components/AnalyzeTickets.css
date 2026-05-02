@@ -307,6 +307,49 @@ textarea::placeholder {
   color: var(--text-faint);
 }
 
+.file-pill {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-elevated);
+  min-height: 140px;
+}
+
+.file-pill-icon {
+  font-size: 22px;
+  flex-shrink: 0;
+}
+
+.file-pill-name {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-body);
+  word-break: break-all;
+}
+
+.file-pill-remove {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--text-faint);
+  padding: 4px 6px;
+  border-radius: 6px;
+  line-height: 1;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.file-pill-remove:hover {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
 .analyze-footer {
   text-align: center;
   margin-top: 28px;

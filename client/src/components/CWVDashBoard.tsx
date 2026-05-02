@@ -291,7 +291,9 @@ export default function CWVDashboard({ data }: { data: Row[] }) {
                       </td>
                     )}
                     <td>
-                      {showNewRelic && item.newRelicStatus === "Green" ? (
+                      {!item.url || !item.metric ? (
+                        <span className="no-cwv-badge" title="This ticket's title does not contain a CWV metric or URL">No CWV data</span>
+                      ) : showNewRelic && item.newRelicStatus === "Green" ? (
                         <button
                           className="action-btn comment"
                           onClick={() => handleComment(item)}
