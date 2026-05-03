@@ -64,6 +64,10 @@ export default function CWVDashboard({ data }: { data: Row[] }) {
     try {
       const resp = await fetch(buildMetricUrl(row));
       const result = await resp.json();
+      if (!resp.ok) {
+        console.error(`Metric fetch failed for ${row.ticket_id}:`, result?.detail ?? resp.status);
+        return row;
+      }
       return {
         ...row,
         newRelicValue: result.value ?? null,
@@ -437,15 +441,31 @@ export default function CWVDashboard({ data }: { data: Row[] }) {
             >
               ‹
             </button>
-            {Array.from({ length: totalPages }).map((_, i) => (
-              <button
-                key={i}
-                className={`page-btn${page === i + 1 ? " active" : ""}`}
-                onClick={() => setPage(i + 1)}
-              >
-                {i + 1}
-              </button>
-            ))}
+            {(() => {
+              const pages: (number | "…")[] = [];
+              if (totalPages <= 7) {
+                for (let i = 1; i <= totalPages; i++) pages.push(i);
+              } else {
+                pages.push(1);
+                if (page > 3) pages.push("…");
+                for (let i = Math.max(2, page - 1); i <= Math.min(totalPages - 1, page + 1); i++) pages.push(i);
+                if (page < totalPages - 2) pages.push("…");
+                pages.push(totalPages);
+              }
+              return pages.map((p, i) =>
+                p === "…" ? (
+                  <span key={`ellipsis-${i}`} className="page-ellipsis">…</span>
+                ) : (
+                  <button
+                    key={p}
+                    className={`page-btn${page === p ? " active" : ""}`}
+                    onClick={() => setPage(p)}
+                  >
+                    {p}
+                  </button>
+                )
+              );
+            })()}
             <button
               className="page-btn"
               onClick={() => setPage((p) => Math.min(totalPages, p + 1))}

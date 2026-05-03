@@ -67,10 +67,13 @@ export default function AnalyzeTickets({ onResult }: AnalyzeTicketsProps) {
         body: formData,
       });
       const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data?.detail ?? `Server error ${response.status}`);
+      }
       onResult(data);
     } catch (err) {
       console.error("Error submitting form:", err);
-      setError("Failed to analyze tickets. Is the backend running?");
+      setError(err instanceof Error ? err.message : "Failed to analyze tickets. Is the backend running?");
     } finally {
       setSubmitting(false);
     }

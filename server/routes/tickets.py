@@ -37,7 +37,14 @@ async def run_script(
     work_item_ids: list[str] = []
 
     if ticket_numbers.strip():
-        work_item_ids = [x.strip() for x in ticket_numbers.split(",") if x.strip()]
+        raw_ids = [x.strip() for x in ticket_numbers.split(",") if x.strip()]
+        invalid = [x for x in raw_ids if not x.isdigit()]
+        if invalid:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid ticket ID(s): {', '.join(invalid)}. Only numeric IDs are accepted.",
+            )
+        work_item_ids = raw_ids
     elif file is not None:
         contents = await file.read()
         filename = file.filename.lower()

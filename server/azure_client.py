@@ -35,10 +35,11 @@ async def get_metric_value(
     attr = METRIC_MAP.get(metric, metric)
     time_clause = build_time_clause(since, from_time, to_time, timezone)
 
+    safe_url = page_url.replace("'", "\\'")
     nrql_query_string = (
         f"SELECT percentile({attr}, 75) AS '{metric}' "
         f"FROM PageViewTiming "
-        f"WHERE pageUrl = '{page_url}' "
+        f"WHERE pageUrl = '{safe_url}' "
         f"AND deviceType = 'Mobile' "
         f"{time_clause}"
     )
