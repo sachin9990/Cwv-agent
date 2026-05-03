@@ -71,7 +71,7 @@ export default function AnalyzeTickets({ onResult }: AnalyzeTicketsProps) {
         body: formData,
       });
       const data = await response.json();
-      if (onResult) onResult(data);
+      onResult(data);
     } catch (err) {
       console.error("Error submitting form:", err);
       alert("Failed to analyze tickets. Is the backend running on port 8000?");

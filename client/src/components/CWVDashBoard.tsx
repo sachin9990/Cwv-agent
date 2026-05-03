@@ -10,7 +10,6 @@ type Row = {
   status: string | null;
   newRelicValue?: number | null;
   newRelicStatus?: string | null;
-  prevValue?: number | null;
 };
 
 type PsiAudit = {
@@ -244,6 +243,12 @@ export default function CWVDashboard({ data }: { data: Row[] }) {
         </button>
       </div>
 
+      <div className="table-wrapper">
+      {loading && (
+        <div className="table-loading-overlay">
+          <span className="psi-spinner" aria-label="Loading" />
+        </div>
+      )}
       <table className="bugs-table">
         <thead>
           <tr>
@@ -416,6 +421,7 @@ export default function CWVDashboard({ data }: { data: Row[] }) {
           )}
         </tbody>
       </table>
+      </div>
 
       {rows.length > 0 && (
         <div className="dashboard-footer">
