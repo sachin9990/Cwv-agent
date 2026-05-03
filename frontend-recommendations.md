@@ -4,20 +4,20 @@
 
 ## Section 1 — Recommendations
 
-### 1. Extract the hardcoded API base URL
-`http://127.0.0.1:8000` appears five times across `AnalyzeTickets.tsx` and `CWVDashBoard.tsx`. One environment variable (`VITE_API_URL`) would make it trivial to point at staging or production without touching component code.
+### ~~1. Extract the hardcoded API base URL~~
+~~`http://127.0.0.1:8000` appears five times across `AnalyzeTickets.tsx` and `CWVDashBoard.tsx`. One environment variable (`VITE_API_URL`) would make it trivial to point at staging or production without touching component code.~~
 
-### 2. Create a shared types file
-`WorkItem` (in `AnalyzeTickets.tsx`) and `Row` (in `CWVDashBoard.tsx`) describe the same shape. They are defined twice and will silently drift apart. Moving both into a single `src/types.ts` and re-exporting them fixes this.
+### ~~2. Create a shared types file~~
+~~`WorkItem` (in `AnalyzeTickets.tsx`) and `Row` (in `CWVDashBoard.tsx`) describe the same shape. They are defined twice and will silently drift apart. Moving both into a single `src/types.ts` and re-exporting them fixes this.~~
 
-### 3. Remove `any` types in `App.tsx`
-`dashboardData` and `handleResult` are typed as `any[]`. Once the shared type exists this is a one-line fix, and TypeScript will catch mismatches end-to-end.
+### ~~3. Remove `any` types in `App.tsx`~~
+~~`dashboardData` and `handleResult` are typed as `any[]`. Once the shared type exists this is a one-line fix, and TypeScript will catch mismatches end-to-end.~~
 
-### 4. Replace `alert()` calls with inline UI feedback
-`AnalyzeTickets.tsx` and `CWVDashBoard.tsx` call `alert()` on errors. Native browser alerts block the tab, look inconsistent, and cannot be styled. Inline error banners inside the card are better UX.
+### ~~4. Replace `alert()` calls with inline UI feedback~~
+~~`AnalyzeTickets.tsx` and `CWVDashBoard.tsx` call `alert()` on errors. Native browser alerts block the tab, look inconsistent, and cannot be styled. Inline error banners inside the card are better UX.~~
 
-### 5. Fix dropzone accessibility
-The drag-and-drop `<div>` in `AnalyzeTickets.tsx` is a keyboard dead-end. It needs `role="button"`, `tabIndex={0}`, and an `onKeyDown` handler so keyboard-only users can activate it. Disabled sidebar items should carry `aria-disabled="true"` instead of relying only on a CSS class.
+### ~~5. Fix dropzone accessibility~~
+~~The drag-and-drop `<div>` in `AnalyzeTickets.tsx` is a keyboard dead-end. It needs `role="button"`, `tabIndex={0}`, and an `onKeyDown` handler so keyboard-only users can activate it. Disabled sidebar items should carry `aria-disabled="true"` instead of relying only on a CSS class.~~
 
 ### 6. Add pagination truncation
 The pagination renders one button per page via `Array.from({ length: totalPages })`. With 100 rows at page-size 5 that produces 20 buttons. A truncated version (first · … · prev · current · next · … · last) is standard and scales to any dataset size.
@@ -25,8 +25,8 @@ The pagination renders one button per page via `Array.from({ length: totalPages 
 ### 7. Auto-detect timezone instead of hardcoding
 `"Asia/Kolkata"` is hardcoded in `TimeRangePicker.tsx`. Users outside that zone will get silently wrong results. `Intl.DateTimeFormat().resolvedOptions().timeZone` returns the browser's local timezone at zero cost.
 
-### 8. Wire up or remove the "Recent" section in TimeRangePicker
-The Recent panel always renders `"You don't have any history yet :-)"` and is never populated. It should either be backed by `localStorage` (save the last 5 custom ranges) or removed entirely to avoid dead UI.
+### ~~8. Wire up or remove the "Recent" section in TimeRangePicker~~
+~~The Recent panel always renders `"You don't have any history yet :-)"` and is never populated. It should either be backed by `localStorage` (save the last 5 custom ranges) or removed entirely to avoid dead UI.~~
 
 ### ~~9. Remove the unused `prevValue` field on `Row`~~
 ~~`CWVDashBoard.tsx` declares `prevValue?: number | null` in the `Row` type but never reads it. Dead fields in shared types mislead readers into thinking there is comparison logic somewhere.~~

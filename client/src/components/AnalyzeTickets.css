@@ -379,6 +379,13 @@ textarea::placeholder {
   box-shadow: none;
 }
 
+.analyze-error {
+  color: var(--red, #f87171);
+  font-size: 0.85rem;
+  margin-top: 0.5rem;
+  text-align: center;
+}
+
 @media (max-width: 1024px) {
   .analyze-hero {
     flex-direction: column;

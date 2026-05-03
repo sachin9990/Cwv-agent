@@ -1,13 +1,7 @@
 import { useRef, useState } from "react";
+import type { WorkItem } from "../types";
+import { API_BASE } from "../lib/api";
 import "./AnalyzeTickets.css";
-
-type WorkItem = {
-  ticket_id: string;
-  url: string | null;
-  metric: string | null;
-  value: number | null;
-  status: string | null;
-};
 
 type AnalyzeTicketsProps = {
   onResult: (data: WorkItem[]) => void;
@@ -18,6 +12,7 @@ export default function AnalyzeTickets({ onResult }: AnalyzeTicketsProps) {
   const [fileName, setFileName] = useState("");
   const [ticketsCount, setTicketsCount] = useState(0);
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -59,6 +54,7 @@ export default function AnalyzeTickets({ onResult }: AnalyzeTicketsProps) {
   const handleSubmit = async () => {
     if (!ticketInput.trim() && !fileInputRef.current?.files?.[0]) return;
 
+    setError(null);
     setSubmitting(true);
     const formData = new FormData();
     if (ticketInput.trim()) formData.append("ticket_numbers", ticketInput);
@@ -66,7 +62,7 @@ export default function AnalyzeTickets({ onResult }: AnalyzeTicketsProps) {
       formData.append("file", fileInputRef.current.files[0]);
 
     try {
-      const response = await fetch("http://127.0.0.1:8000/run-script", {
+      const response = await fetch(`${API_BASE}/run-script`, {
         method: "POST",
         body: formData,
       });
@@ -74,7 +70,7 @@ export default function AnalyzeTickets({ onResult }: AnalyzeTicketsProps) {
       onResult(data);
     } catch (err) {
       console.error("Error submitting form:", err);
-      alert("Failed to analyze tickets. Is the backend running on port 8000?");
+      setError("Failed to analyze tickets. Is the backend running?");
     } finally {
       setSubmitting(false);
     }
@@ -162,7 +158,12 @@ export default function AnalyzeTickets({ onResult }: AnalyzeTicketsProps) {
               <>
                 <div
                   className="dropzone"
+                  role="button"
+                  tabIndex={0}
                   onClick={() => fileInputRef.current?.click()}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") fileInputRef.current?.click();
+                  }}
                   onDragOver={handleDragOver}
                   onDrop={handleDrop}
                 >
@@ -185,6 +186,7 @@ export default function AnalyzeTickets({ onResult }: AnalyzeTicketsProps) {
             {submitting ? "Analyzing…" : "Analyze CWV Issues →"}
           </button>
         </div>
+        {error && <p className="analyze-error">{error}</p>}
       </div>
     </section>
   );

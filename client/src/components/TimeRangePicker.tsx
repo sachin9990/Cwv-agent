@@ -25,6 +25,22 @@ const PRESETS: { label: string; since: string }[] = [
   { label: "6 months", since: "6 months" },
 ];
 
+const RECENT_KEY = "cwv-trp-recent";
+const MAX_RECENT = 5;
+
+function loadRecent(): TimeRange[] {
+  try {
+    return JSON.parse(localStorage.getItem(RECENT_KEY) ?? "[]");
+  } catch {
+    return [];
+  }
+}
+
+function saveRecent(range: TimeRange) {
+  const prev = loadRecent().filter((r) => r.label !== range.label);
+  localStorage.setItem(RECENT_KEY, JSON.stringify([range, ...prev].slice(0, MAX_RECENT)));
+}
+
 function pad(n: number) {
   return n.toString().padStart(2, "0");
 }
@@ -48,6 +64,8 @@ function fiveMinutesAgoIso(): { date: string; time: string } {
 export default function TimeRangePicker({ value, onChange }: Props) {
   const [open, setOpen] = useState(false);
   const [showCustom, setShowCustom] = useState(value.kind === "custom");
+  const [customError, setCustomError] = useState<string | null>(null);
+  const [recentRanges, setRecentRanges] = useState<TimeRange[]>(loadRecent);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
   const initialFrom = value.kind === "custom" ? value.from : "";
@@ -60,7 +78,6 @@ export default function TimeRangePicker({ value, onChange }: Props) {
   const [toTime, setToTime] = useState(initialTo.split(" ")[1]?.slice(0, 5) || nowIso().time);
   const timezone = "Asia/Kolkata";
 
-  // Close popover on outside click
   useEffect(() => {
     if (!open) return;
     const onDocClick = (e: MouseEvent) => {
@@ -73,7 +90,10 @@ export default function TimeRangePicker({ value, onChange }: Props) {
   }, [open]);
 
   const choosePreset = (preset: { label: string; since: string }) => {
-    onChange({ kind: "relative", since: preset.since, label: preset.label });
+    const range: TimeRange = { kind: "relative", since: preset.since, label: preset.label };
+    saveRecent(range);
+    setRecentRanges(loadRecent());
+    onChange(range);
     setShowCustom(false);
     setOpen(false);
   };
@@ -91,16 +111,20 @@ export default function TimeRangePicker({ value, onChange }: Props) {
     const from = `${fromDate} ${fromTime}:00`;
     const to = `${toDate} ${toTime}:00`;
     if (new Date(from).getTime() >= new Date(to).getTime()) {
-      alert("Start time must be earlier than end time.");
+      setCustomError("Start time must be earlier than end time.");
       return;
     }
-    onChange({
+    setCustomError(null);
+    const range: TimeRange = {
       kind: "custom",
       from,
       to,
       timezone,
       label: `${fromDate} ${fromTime} → ${toDate} ${toTime} (${timezone})`,
-    });
+    };
+    saveRecent(range);
+    setRecentRanges(loadRecent());
+    onChange(range);
     setOpen(false);
   };
 
@@ -184,6 +208,10 @@ export default function TimeRangePicker({ value, onChange }: Props) {
                 />
               </div>
 
+              {customError && (
+                <p className="trp-error">{customError}</p>
+              )}
+
               <div className="trp-actions-row">
                 <button
                   type="button"
@@ -203,9 +231,26 @@ export default function TimeRangePicker({ value, onChange }: Props) {
 
               <div className="trp-recent">
                 <div className="trp-recent-heading">Recent</div>
-                <div className="trp-recent-empty">
-                  You don't have any history yet :-)
-                </div>
+                {recentRanges.length === 0 ? (
+                  <div className="trp-recent-empty">
+                    You don't have any history yet :-)
+                  </div>
+                ) : (
+                  <ul>
+                    {recentRanges.map((r) => (
+                      <li
+                        key={r.label}
+                        className="trp-rail-item"
+                        onClick={() => {
+                          onChange(r);
+                          setOpen(false);
+                        }}
+                      >
+                        {r.label}
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
             </div>
           )}

@@ -1,16 +1,10 @@
 import React, { useEffect, useMemo, useState } from "react";
 import TimeRangePicker, { type TimeRange } from "./TimeRangePicker";
+import type { WorkItem } from "../types";
+import { API_BASE } from "../lib/api";
 import "./CWVDashboard.css";
 
-type Row = {
-  ticket_id: string;
-  url: string | null;
-  metric: string | null;
-  value: number | null;
-  status: string | null;
-  newRelicValue?: number | null;
-  newRelicStatus?: string | null;
-};
+type Row = WorkItem;
 
 type PsiAudit = {
   id: string;
@@ -39,6 +33,7 @@ export default function CWVDashboard({ data }: { data: Row[] }) {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(5);
   const [commentingId, setCommentingId] = useState<string | null>(null);
+  const [commentError, setCommentError] = useState<string | null>(null);
   const [psiMap, setPsiMap] = useState<Record<string, PsiState>>({});
   const [commentMap, setCommentMap] = useState<Record<string, string>>({});
 
@@ -61,7 +56,7 @@ export default function CWVDashboard({ data }: { data: Row[] }) {
       params.set("to_time", range.to);
       params.set("timezone", range.timezone);
     }
-    return `http://127.0.0.1:8000/get-metric?${params.toString()}`;
+    return `${API_BASE}/get-metric?${params.toString()}`;
   };
 
   const fetchMetric = async (row: Row): Promise<Row> => {
@@ -89,6 +84,7 @@ export default function CWVDashboard({ data }: { data: Row[] }) {
 
   const handleComment = async (row: Row) => {
     setCommentingId(row.ticket_id);
+    setCommentError(null);
     try {
       const body: Record<string, unknown> = {
         ticket_id: row.ticket_id,
@@ -103,7 +99,7 @@ export default function CWVDashboard({ data }: { data: Row[] }) {
         body.to_time = range.to;
         body.timezone = range.timezone;
       }
-      const resp = await fetch("http://127.0.0.1:8000/comment-assign", {
+      const resp = await fetch(`${API_BASE}/comment-assign`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
@@ -112,10 +108,10 @@ export default function CWVDashboard({ data }: { data: Row[] }) {
       if (result.success && result.comment_preview) {
         setCommentMap((prev) => ({ ...prev, [row.ticket_id]: result.comment_preview }));
       } else {
-        alert(result.message ?? "Failed to add comment");
+        setCommentError(result.message ?? "Failed to add comment");
       }
     } catch (err) {
-      alert(`Error: ${err}`);
+      setCommentError(`Error: ${err}`);
     } finally {
       setCommentingId(null);
     }
@@ -127,7 +123,7 @@ export default function CWVDashboard({ data }: { data: Row[] }) {
     try {
       const params = new URLSearchParams({ url: row.url, strategy: "mobile" });
       if (row.metric) params.set("metric", row.metric);
-      const resp = await fetch(`http://127.0.0.1:8000/get-pagespeed?${params}`);
+      const resp = await fetch(`${API_BASE}/get-pagespeed?${params}`);
       if (!resp.ok) {
         const errData = await resp.json().catch(() => ({}));
         throw new Error(errData.detail ?? `HTTP ${resp.status}`);
@@ -242,6 +238,10 @@ export default function CWVDashboard({ data }: { data: Row[] }) {
           {loading ? "Fetching…" : "Get Data from New Relic"}
         </button>
       </div>
+
+      {commentError && (
+        <div className="dashboard-error">{commentError}</div>
+      )}
 
       <div className="table-wrapper">
       {loading && (
