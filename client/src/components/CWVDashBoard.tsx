@@ -36,11 +36,14 @@ export default function CWVDashboard({ data }: { data: Row[] }) {
   const [commentError, setCommentError] = useState<string | null>(null);
   const [psiMap, setPsiMap] = useState<Record<string, PsiState>>({});
   const [commentMap, setCommentMap] = useState<Record<string, string>>({});
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkProgress, setBulkProgress] = useState<{ done: number; total: number } | null>(null);
 
   useEffect(() => {
     setRows(data);
     setShowNewRelic(false);
     setPage(1);
+    setSelectedIds(new Set());
   }, [data]);
 
   const buildMetricUrl = (row: Row) => {
@@ -159,6 +162,41 @@ export default function CWVDashboard({ data }: { data: Row[] }) {
     fetchPsi(row);
   };
 
+  const selectableIds = useMemo(
+    () => rows.filter((r) => r.newRelicStatus === "Green" && !commentMap[r.ticket_id]).map((r) => r.ticket_id),
+    [rows, commentMap]
+  );
+
+  const allSelected = selectableIds.length > 0 && selectableIds.every((id) => selectedIds.has(id));
+
+  const handleSelectAll = () => {
+    if (allSelected) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(selectableIds));
+    }
+  };
+
+  const handleSelectRow = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const handleBulkComment = async () => {
+    const toComment = rows.filter((r) => selectedIds.has(r.ticket_id));
+    setBulkProgress({ done: 0, total: toComment.length });
+    for (let i = 0; i < toComment.length; i++) {
+      await handleComment(toComment[i]);
+      setBulkProgress({ done: i + 1, total: toComment.length });
+    }
+    setSelectedIds(new Set());
+    setBulkProgress(null);
+  };
+
   // Stats from New Relic responses only
   const stats = useMemo(() => {
     if (!showNewRelic) return { total: 0, good: 0, needsFix: 0, critical: 0 };
@@ -234,6 +272,17 @@ export default function CWVDashboard({ data }: { data: Row[] }) {
 
       <div className="dashboard-toolbar">
         <TimeRangePicker value={range} onChange={setRange} />
+        {selectedIds.size > 0 && (
+          <button
+            className="bulk-comment-btn"
+            onClick={handleBulkComment}
+            disabled={bulkProgress !== null}
+          >
+            {bulkProgress
+              ? `Commenting ${bulkProgress.done}/${bulkProgress.total}…`
+              : `💬 Bulk Comment (${selectedIds.size})`}
+          </button>
+        )}
         <button
           className="get-data-btn"
           onClick={handleGetData}
@@ -256,6 +305,16 @@ export default function CWVDashboard({ data }: { data: Row[] }) {
       <table className="bugs-table">
         <thead>
           <tr>
+            <th className="th-checkbox">
+              {showNewRelic && selectableIds.length > 0 && (
+                <input
+                  type="checkbox"
+                  checked={allSelected}
+                  onChange={handleSelectAll}
+                  title="Select all Green tickets"
+                />
+              )}
+            </th>
             <th>Bug ID</th>
             <th>Title</th>
             <th>Parameter</th>
@@ -272,6 +331,15 @@ export default function CWVDashboard({ data }: { data: Row[] }) {
               return (
                 <React.Fragment key={item.ticket_id}>
                   <tr className={commentText ? "row--commented" : ""}>
+                    <td className="td-checkbox">
+                      {showNewRelic && item.newRelicStatus === "Green" && !commentText && (
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.has(item.ticket_id)}
+                          onChange={() => handleSelectRow(item.ticket_id)}
+                        />
+                      )}
+                    </td>
                     <td className="bug-id">{item.ticket_id}</td>
                     <td className="url-cell">
                       {item.url ? (
@@ -325,7 +393,7 @@ export default function CWVDashboard({ data }: { data: Row[] }) {
 
                   {psiState && (
                     <tr className="psi-expanded-row">
-                      <td colSpan={showNewRelic ? 6 : 5}>
+                      <td colSpan={showNewRelic ? 7 : 6}>
                         <div className="psi-panel">
                           {psiState.status === "loading" && (
                             <div className="psi-loading">
@@ -405,7 +473,7 @@ export default function CWVDashboard({ data }: { data: Row[] }) {
 
                   {commentText && (
                     <tr className="row--comment-msg">
-                      <td colSpan={showNewRelic ? 6 : 5}>
+                      <td colSpan={showNewRelic ? 7 : 6}>
                         <div className="comment-preview">
                           <span className="comment-preview-icon">✅</span>
                           <span className="comment-preview-text">{commentText}</span>
@@ -418,7 +486,7 @@ export default function CWVDashboard({ data }: { data: Row[] }) {
             })
           ) : (
             <tr>
-              <td colSpan={showNewRelic ? 6 : 5} className="empty">
+              <td colSpan={showNewRelic ? 7 : 6} className="empty">
                 No data — analyze tickets above to populate the dashboard.
               </td>
             </tr>
