@@ -11,12 +11,12 @@
 
 ---
 
-## Step 2 — Table Filters & Search
+## ~~Step 2 — Table Filters & Search~~
 
-- Add a search bar to filter rows by ticket ID or URL
-- Add status filter buttons: All / Green / Amber / Red
-- Add metric filter dropdown: All / LCP / CLS / INP
-- Persist filter state across page navigations
+- ~~Add a search bar to filter rows by ticket ID or URL~~
+- ~~Add status filter buttons: All / Green / Amber / Red~~
+- ~~Add metric filter dropdown: All / LCP / CLS / INP~~
+- ~~Persist filter state across page navigations~~
 
 ---
 
@@ -35,12 +35,12 @@
 
 ---
 
-## Step 5 — History Page
+## ~~Step 5 — History Page~~
 
-- Build out the disabled "History" sidebar item
-- Read from `server/CWVs Report - YYYY-MM-DD/metrics_report.json` files
-- Show a list of past analysis runs with date, ticket count, and status breakdown
-- Allow clicking a past run to view its full results
+- ~~Build out the disabled "History" sidebar item~~
+- ~~Read from `server/CWVs Report - YYYY-MM-DD/metrics_report.json` files~~
+- ~~Show a list of past analysis runs with date, ticket count, and status breakdown~~
+- ~~Allow clicking a past run to view its full results~~
 
 ---
 
@@ -52,17 +52,17 @@
 
 ---
 
-## Step 7 — UI Polish
+## ~~Step 7 — UI Polish~~
 
-- Make the layout responsive for smaller screens
-- Remove or replace the disabled sidebar items with a "Coming Soon" tooltip until built
-- Add empty state illustrations when the dashboard has no data
-- Make summary cards show percentage change vs. previous run (trend arrows)
+- ~~Make the layout responsive for smaller screens~~
+- ~~Remove or replace the disabled sidebar items with a "Coming Soon" tooltip until built~~
+- ~~Add empty state illustrations when the dashboard has no data~~
+- ~~Make summary cards show percentage change vs. previous run (trend arrows)~~
 
 ---
 
-## Step 8 — Performance & DX
+## ~~Step 8 — Performance & DX~~
 
-- Add loading skeletons instead of spinners for the table
-- Add error boundaries so one failing row doesn't crash the whole dashboard
-- Add toast notifications for success/failure on comment and bulk actions
+- ~~Add loading skeletons instead of spinners for the table~~
+- ~~Add error boundaries so one failing row doesn't crash the whole dashboard~~
+- ~~Add toast notifications for success/failure on comment and bulk actions~~

@@ -12,25 +12,28 @@ type SidebarProps = {
   onToggleTheme: () => void;
   activePage: Page;
   onNavigate: (page: Page) => void;
+  isOpen: boolean;
+  onClose: () => void;
 };
 
 const menuItems: MenuItem[] = [
   { text: "Analyze", icon: "📊", page: "analyze" },
   { text: "Dashboard", icon: "📈", page: "dashboard" },
-  { text: "History", icon: "🕓" },
+  { text: "History", icon: "🕓", page: "history" },
   { text: "Settings", icon: "⚙️" },
 ];
 
-export default function Sidebar({ theme, onToggleTheme, activePage, onNavigate }: SidebarProps) {
+export default function Sidebar({ theme, onToggleTheme, activePage, onNavigate, isOpen, onClose }: SidebarProps) {
   const handleClick = (item: MenuItem) => {
     if (item.page) onNavigate(item.page);
   };
 
   return (
-    <aside className="sidebar">
+    <aside className={`sidebar${isOpen ? " sidebar--open" : ""}`}>
       <div className="sidebar-header">
         <div className="sidebar-logo">C</div>
         <h2>CWV Agent</h2>
+        <button className="sidebar-close-btn" onClick={onClose} aria-label="Close menu">✕</button>
       </div>
 
       <ul className="menu">

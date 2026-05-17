@@ -5,7 +5,9 @@
       "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\Sachin\\\\OneDrive\\\\Desktop\\\\cwvAgent\\\\server\" -Recurse -File)",
       "Bash(Select-Object FullName)",
       "Bash(npm run *)",
-      "Bash(.\\\\venv\\\\Scripts\\\\python.exe -m py_compile routes/tickets.py azure_client.py routes/comments.py routes/metrics.py routes/pagespeed.py utils.py main.py)"
+      "Bash(.\\\\venv\\\\Scripts\\\\python.exe -m py_compile routes/tickets.py azure_client.py routes/comments.py routes/metrics.py routes/pagespeed.py utils.py main.py)",
+      "Bash(dir C:\\\\Users\\\\Sachin\\\\Desktop *)",
+      "Bash(npx tsc *)"
     ]
   }
 }

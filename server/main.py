@@ -11,6 +11,7 @@ from routes.tickets import router as tickets_router
 from routes.metrics import router as metrics_router
 from routes.pagespeed import router as pagespeed_router
 from routes.comments import router as comments_router
+from routes.history import router as history_router
 
 REQUIRED_ENV_VARS = [
     "AZDO_ORG",
@@ -44,3 +45,4 @@ app.include_router(tickets_router)
 app.include_router(metrics_router)
 app.include_router(pagespeed_router)
 app.include_router(comments_router)
+app.include_router(history_router)

@@ -76,8 +76,47 @@
 
 .menu-item.disabled {
   cursor: default;
-  opacity: 0.45;
+  opacity: 0.5;
+  position: relative;
+}
+
+/* "Coming Soon" tooltip */
+.menu-item.disabled::after {
+  content: "Coming Soon";
+  position: absolute;
+  left: calc(100% + 10px);
+  top: 50%;
+  transform: translateY(-50%);
+  background: #1f2937;
+  color: #f9fafb;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 5px;
+  white-space: nowrap;
   pointer-events: none;
+  z-index: 20;
+  opacity: 0;
+  transition: opacity 0.18s ease;
+}
+
+html[data-theme="light"] .menu-item.disabled::after {
+  background: #1f2937;
+  color: #f9fafb;
+}
+
+html[data-theme="dark"] .menu-item.disabled::after {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.menu-item.disabled:hover {
+  background: var(--bg-subtle);
+  opacity: 0.75;
+}
+
+.menu-item.disabled:hover::after {
+  opacity: 1;
 }
 
 .menu-icon {
@@ -139,4 +178,59 @@
   bottom: 8px;
   right: 12px;
   font-size: 24px;
+}
+
+/* Close button — hidden on desktop */
+.sidebar-close-btn {
+  display: none;
+}
+
+/* ----------------------------------------
+   Mobile responsive sidebar
+---------------------------------------- */
+@media (max-width: 768px) {
+  .sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    z-index: 100;
+    transform: translateX(-100%);
+    transition: transform 0.25s ease, background-color 0.25s ease, border-color 0.25s ease;
+    min-height: 100vh;
+    overflow-y: auto;
+  }
+
+  .sidebar.sidebar--open {
+    transform: translateX(0);
+  }
+
+  .sidebar-close-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: auto;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 14px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+
+  .sidebar-close-btn:hover {
+    background: var(--bg-subtle);
+    color: var(--text-body);
+  }
+
+  /* Tooltip appears to the right — clip at screen edge on mobile, show below instead */
+  .menu-item.disabled::after {
+    left: auto;
+    right: 0;
+    top: calc(100% + 6px);
+    transform: none;
+  }
 }

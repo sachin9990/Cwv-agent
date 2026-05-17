@@ -1,6 +1,8 @@
 import { useRef, useState } from "react";
 import type { WorkItem } from "../types";
 import { API_BASE } from "../lib/api";
+import { TESTING } from "../lib/config";
+import { MOCK_AZURE_DATA } from "../lib/mockData";
 import "./AnalyzeTickets.css";
 
 type AnalyzeTicketsProps = {
@@ -56,6 +58,14 @@ export default function AnalyzeTickets({ onResult }: AnalyzeTicketsProps) {
 
     setError(null);
     setSubmitting(true);
+
+    if (TESTING) {
+      await new Promise((r) => setTimeout(r, 600)); // simulate network delay
+      onResult(MOCK_AZURE_DATA);
+      setSubmitting(false);
+      return;
+    }
+
     const formData = new FormData();
     if (ticketInput.trim()) formData.append("ticket_numbers", ticketInput);
     if (fileInputRef.current?.files?.[0])
