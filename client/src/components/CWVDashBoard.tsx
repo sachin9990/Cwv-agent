@@ -9,11 +9,71 @@ import "./CWVDashboard.css";
 
 type Row = WorkItem;
 type Toast = { id: string; message: string; type: "success" | "error" };
-type PsiAudit = { id: string; title: string; description: string; score: number; displayValue: string };
-type PsiState =
+type PsiNodeRef = { selector?: string; snippet?: string; nodeLabel?: string };
+type PsiDetailItem = {
+  url?: string;
+  totalBytes?: number;
+  wastedBytes?: number;
+  wastedMs?: number;
+  score?: number;
+  label?: string;
+  groupLabel?: string;
+  duration?: number;
+  transferSize?: number;
+  node?: PsiNodeRef;
+};
+type PsiDetails = {
+  type?: string;
+  items: PsiDetailItem[];
+  totalItems: number;
+  overallSavingsMs?: number | null;
+  overallSavingsBytes?: number | null;
+};
+type PsiAudit = {
+  id: string;
+  title: string;
+  description: string;
+  score: number;
+  displayValue: string;
+  details?: PsiDetails | null;
+};
+
+function shortenUrl(url: string, max = 64): string {
+  if (url.length <= max) return url;
+  try {
+    const u = new URL(url);
+    const path = u.pathname + u.search;
+    const head = u.host;
+    const tailLen = Math.max(8, max - head.length - 3);
+    return path.length > tailLen ? `${head}…${path.slice(-tailLen)}` : `${head}${path}`;
+  } catch {
+    return url.slice(0, max - 1) + "…";
+  }
+}
+
+function formatKb(bytes: number): string {
+  return bytes >= 1024 ? `${(bytes / 1024).toFixed(0)} KB` : `${bytes} B`;
+}
+type PsiResult =
   | { status: "loading" }
   | { status: "error"; message: string }
   | { status: "done"; audits: PsiAudit[] };
+type PsiStrategy = "mobile" | "desktop";
+type PsiChoice = PsiStrategy | "both";
+type PsiState = {
+  choice: PsiChoice;
+  collapsed?: boolean;
+  mobile?: PsiResult;
+  desktop?: PsiResult;
+};
+
+const PSI_STRATEGY_STORAGE_KEY = "cwv-psi-strategy";
+const DEFAULT_PSI_CHOICE: PsiChoice = "mobile";
+
+function readPsiChoice(): PsiChoice {
+  const stored = sessionStorage.getItem(PSI_STRATEGY_STORAGE_KEY);
+  return stored === "mobile" || stored === "desktop" || stored === "both" ? stored : DEFAULT_PSI_CHOICE;
+}
 type RunStats = { total: number; good: number; needsFix: number; critical: number };
 type StatusFilter = "All" | "Green" | "Amber" | "Red";
 type MetricFilter = "All" | "LCP" | "CLS" | "INP";
@@ -193,11 +253,15 @@ export default function CWVDashboard({
     }
   };
 
-  const fetchPsi = async (row: Row) => {
+  const fetchPsiStrategy = async (row: Row, strategy: PsiStrategy) => {
     if (!row.url) return;
-    setPsiMap((prev) => ({ ...prev, [row.ticket_id]: { status: "loading" } }));
+    setPsiMap((prev) => {
+      const existing = prev[row.ticket_id];
+      const choice = existing?.choice ?? readPsiChoice();
+      return { ...prev, [row.ticket_id]: { ...existing, choice, [strategy]: { status: "loading" } } };
+    });
     try {
-      const params = new URLSearchParams({ url: row.url, strategy: "mobile" });
+      const params = new URLSearchParams({ url: row.url, strategy });
       if (row.metric) params.set("metric", row.metric);
       const resp = await fetch(`${API_BASE}/get-pagespeed?${params}`);
       if (!resp.ok) {
@@ -205,20 +269,59 @@ export default function CWVDashboard({
         throw new Error(errData.detail ?? `HTTP ${resp.status}`);
       }
       const data = await resp.json();
-      setPsiMap((prev) => ({ ...prev, [row.ticket_id]: { status: "done", audits: data.recommendations } }));
+      setPsiMap((prev) => {
+        const existing = prev[row.ticket_id];
+        if (!existing) return prev;
+        return { ...prev, [row.ticket_id]: { ...existing, [strategy]: { status: "done", audits: data.recommendations } } };
+      });
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
-      setPsiMap((prev) => ({ ...prev, [row.ticket_id]: { status: "error", message } }));
+      setPsiMap((prev) => {
+        const existing = prev[row.ticket_id];
+        if (!existing) return prev;
+        return { ...prev, [row.ticket_id]: { ...existing, [strategy]: { status: "error", message } } };
+      });
+    }
+  };
+
+  const ensurePsiForChoice = (row: Row, choice: PsiChoice, current?: PsiState) => {
+    const targets: PsiStrategy[] = choice === "both" ? ["mobile", "desktop"] : [choice];
+    for (const strategy of targets) {
+      if (!current?.[strategy]) {
+        fetchPsiStrategy(row, strategy);
+      }
     }
   };
 
   const handleFix = (row: Row) => {
     if (!row.url) return;
-    if (psiMap[row.ticket_id]) {
-      setPsiMap((prev) => { const next = { ...prev }; delete next[row.ticket_id]; return next; });
+    const existing = psiMap[row.ticket_id];
+    if (existing) {
+      setPsiMap((prev) => ({ ...prev, [row.ticket_id]: { ...existing, collapsed: !existing.collapsed } }));
       return;
     }
-    fetchPsi(row);
+    const choice = readPsiChoice();
+    setPsiMap((prev) => ({ ...prev, [row.ticket_id]: { choice, collapsed: false } }));
+    ensurePsiForChoice(row, choice);
+  };
+
+  const handlePsiChoiceChange = (row: Row, choice: PsiChoice) => {
+    sessionStorage.setItem(PSI_STRATEGY_STORAGE_KEY, choice);
+    setPsiMap((prev) => {
+      const existing = prev[row.ticket_id];
+      if (!existing) return prev;
+      return { ...prev, [row.ticket_id]: { ...existing, choice } };
+    });
+    ensurePsiForChoice(row, choice, psiMap[row.ticket_id]);
+  };
+
+  const handlePsiRefresh = (row: Row) => {
+    const existing = psiMap[row.ticket_id];
+    if (!existing) return;
+    const targets: PsiStrategy[] = existing.choice === "both" ? ["mobile", "desktop"] : [existing.choice];
+    for (const strategy of targets) {
+      fetchPsiStrategy(row, strategy);
+    }
   };
 
   // Filtered rows — drives the table; summary cards always count all rows
@@ -560,10 +663,10 @@ export default function CWVDashboard({
                                 </button>
                               ) : showNewRelic && item.newRelicStatus ? (
                                 <button
-                                  className={`action-btn fix${psiState ? " fix--active" : ""}`}
+                                  className={`action-btn fix${psiState && !psiState.collapsed ? " fix--active" : ""}`}
                                   onClick={() => handleFix(item)}
                                 >
-                                  {psiState ? "✕ Close" : "🔧 Fix"}
+                                  {!psiState ? "Get Recommendations" : psiState.collapsed ? "▼ Expand" : "▲ Collapse"}
                                 </button>
                               ) : (
                                 <span className="muted">—</span>
@@ -571,23 +674,33 @@ export default function CWVDashboard({
                             </td>
                           </tr>
 
-                          {psiState && (
+                          {psiState && !psiState.collapsed && (
                             <tr className="psi-expanded-row">
                               <td colSpan={showNewRelic ? 7 : 6}>
                                 <div className="psi-panel">
-                                  {psiState.status === "loading" && (
-                                    <div className="psi-loading">
-                                      <span className="psi-spinner" aria-label="Loading" />
-                                      Fetching PageSpeed recommendations…
-                                    </div>
-                                  )}
-                                  {psiState.status === "error" && (
-                                    <div className="psi-error">
-                                      <span className="psi-error-msg">
-                                        Could not load recommendations: {psiState.message}
-                                      </span>
-                                      <button type="button" className="psi-retry-btn" onClick={() => fetchPsi(item)}>
-                                        ↺ Try Again
+                                  <div className="psi-header">
+                                    <span className="psi-title">PageSpeed Recommendations</span>
+                                    <div className="psi-controls">
+                                      <div className="psi-strategy-toggle" role="group" aria-label="Form factor">
+                                        {(["mobile", "desktop", "both"] as const).map((opt) => (
+                                          <button
+                                            key={opt}
+                                            type="button"
+                                            className={`psi-strategy-btn${psiState.choice === opt ? " is-active" : ""}`}
+                                            onClick={() => handlePsiChoiceChange(item, opt)}
+                                            aria-pressed={psiState.choice === opt}
+                                          >
+                                            {opt === "mobile" ? "📱 Mobile" : opt === "desktop" ? "💻 Desktop" : "Both"}
+                                          </button>
+                                        ))}
+                                      </div>
+                                      <button
+                                        type="button"
+                                        className="psi-refresh-btn"
+                                        onClick={() => handlePsiRefresh(item)}
+                                        title="Re-run PageSpeed Insights"
+                                      >
+                                        ↻ Refresh
                                       </button>
                                       {item.url && (
                                         <a
@@ -596,50 +709,129 @@ export default function CWVDashboard({
                                           rel="noopener noreferrer"
                                           className="psi-external-link"
                                         >
-                                          Open in PageSpeed Insights ↗
+                                          Full report ↗
                                         </a>
                                       )}
                                     </div>
-                                  )}
-                                  {psiState.status === "done" && (
-                                    <div className="psi-recommendations">
-                                      <div className="psi-header">
-                                        <span className="psi-title">Top PageSpeed Recommendations</span>
-                                        {item.url && (
-                                          <a
-                                            href={`https://pagespeed.web.dev/analysis?url=${encodeURIComponent(item.url)}`}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="psi-external-link"
-                                          >
-                                            Full report ↗
-                                          </a>
-                                        )}
-                                      </div>
-                                      {psiState.audits.length === 0 ? (
-                                        <p className="psi-empty">No failed audits found.</p>
-                                      ) : (
-                                        <ul className="psi-audit-list">
-                                          {psiState.audits.map((audit) => (
-                                            <li key={audit.id} className="psi-audit-item">
-                                              <div className="psi-audit-header">
-                                                <span className={`psi-score-badge psi-score--${audit.score < 0.5 ? "fail" : "warn"}`}>
-                                                  {Math.round(audit.score * 100)}
-                                                </span>
-                                                <span className="psi-audit-title">{audit.title}</span>
-                                                {audit.displayValue && (
-                                                  <span className="psi-display-value">{audit.displayValue}</span>
-                                                )}
-                                              </div>
-                                              {audit.description && (
-                                                <p className="psi-audit-desc">{audit.description}</p>
-                                              )}
-                                            </li>
-                                          ))}
-                                        </ul>
-                                      )}
-                                    </div>
-                                  )}
+                                  </div>
+
+                                  {(["mobile", "desktop"] as const)
+                                    .filter((s) => psiState.choice === s || psiState.choice === "both")
+                                    .map((strategy) => {
+                                      const result = psiState[strategy];
+                                      const showLabel = psiState.choice === "both";
+                                      return (
+                                        <div key={strategy} className="psi-strategy-section">
+                                          {showLabel && (
+                                            <div className="psi-strategy-label">
+                                              {strategy === "mobile" ? "📱 Mobile" : "💻 Desktop"}
+                                            </div>
+                                          )}
+                                          {(!result || result.status === "loading") && (
+                                            <div className="psi-loading">
+                                              <span className="psi-spinner" aria-label="Loading" />
+                                              Fetching {strategy} recommendations…
+                                            </div>
+                                          )}
+                                          {result?.status === "error" && (
+                                            <div className="psi-error">
+                                              <span className="psi-error-msg">
+                                                Could not load {strategy} recommendations: {result.message}
+                                              </span>
+                                              <button
+                                                type="button"
+                                                className="psi-retry-btn"
+                                                onClick={() => fetchPsiStrategy(item, strategy)}
+                                              >
+                                                ↺ Try Again
+                                              </button>
+                                            </div>
+                                          )}
+                                          {result?.status === "done" && (
+                                            result.audits.length === 0 ? (
+                                              <p className="psi-empty">No failed audits found.</p>
+                                            ) : (
+                                              <ul className="psi-audit-list">
+                                                {result.audits.map((audit) => (
+                                                  <li key={audit.id} className="psi-audit-item">
+                                                    <div className="psi-audit-header">
+                                                      <span className={`psi-score-badge psi-score--${audit.score < 0.5 ? "fail" : "warn"}`}>
+                                                        {Math.round(audit.score * 100)}
+                                                      </span>
+                                                      <span className="psi-audit-title">{audit.title}</span>
+                                                      {audit.displayValue && (
+                                                        <span className="psi-display-value">{audit.displayValue}</span>
+                                                      )}
+                                                    </div>
+                                                    {audit.description && (
+                                                      <p className="psi-audit-desc">{audit.description}</p>
+                                                    )}
+                                                    {audit.details && audit.details.items.length > 0 && (
+                                                      <div className="psi-details">
+                                                        {(audit.details.overallSavingsMs || audit.details.overallSavingsBytes) && (
+                                                          <div className="psi-savings-summary">
+                                                            Potential savings:{" "}
+                                                            {audit.details.overallSavingsMs
+                                                              ? `${Math.round(audit.details.overallSavingsMs)} ms`
+                                                              : ""}
+                                                            {audit.details.overallSavingsMs && audit.details.overallSavingsBytes ? " · " : ""}
+                                                            {audit.details.overallSavingsBytes
+                                                              ? formatKb(audit.details.overallSavingsBytes)
+                                                              : ""}
+                                                          </div>
+                                                        )}
+                                                        <ul className="psi-detail-list">
+                                                          {audit.details.items.map((it, i) => {
+                                                            const impactParts: string[] = [];
+                                                            if (it.wastedMs) impactParts.push(`${Math.round(it.wastedMs)} ms`);
+                                                            if (it.wastedBytes) impactParts.push(formatKb(it.wastedBytes));
+                                                            if (!it.wastedMs && !it.wastedBytes && typeof it.score === "number") {
+                                                              impactParts.push(`shift: ${it.score.toFixed(3)}`);
+                                                            }
+                                                            if (!impactParts.length && it.totalBytes) impactParts.push(formatKb(it.totalBytes));
+                                                            return (
+                                                              <li key={i} className="psi-detail-item">
+                                                                {it.node?.selector && (
+                                                                  <code className="psi-selector" title={it.node.snippet}>
+                                                                    {it.node.selector}
+                                                                  </code>
+                                                                )}
+                                                                {it.url && (
+                                                                  <a
+                                                                    href={it.url}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    className="psi-detail-url"
+                                                                    title={it.url}
+                                                                  >
+                                                                    {shortenUrl(it.url)}
+                                                                  </a>
+                                                                )}
+                                                                {!it.node?.selector && !it.url && (it.label || it.groupLabel) && (
+                                                                  <span className="psi-detail-label">{it.label ?? it.groupLabel}</span>
+                                                                )}
+                                                                {impactParts.length > 0 && (
+                                                                  <span className="psi-item-impact">{impactParts.join(" · ")}</span>
+                                                                )}
+                                                              </li>
+                                                            );
+                                                          })}
+                                                        </ul>
+                                                        {audit.details.totalItems > audit.details.items.length && (
+                                                          <div className="psi-more">
+                                                            + {audit.details.totalItems - audit.details.items.length} more
+                                                          </div>
+                                                        )}
+                                                      </div>
+                                                    )}
+                                                  </li>
+                                                ))}
+                                              </ul>
+                                            )
+                                          )}
+                                        </div>
+                                      );
+                                    })}
                                 </div>
                               </td>
                             </tr>

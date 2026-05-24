@@ -95,13 +95,7 @@ async def get_pagespeed(
     relevant_ids = _METRIC_AUDIT_IDS.get((metric or "").upper())
 
     failed = [
-        {
-            "id": v["id"],
-            "title": v.get("title", ""),
-            "description": v.get("description", ""),
-            "score": v["score"],
-            "displayValue": v.get("displayValue", ""),
-        }
+        _format_audit(v)
         for v in audits.values()
         if v.get("score") is not None
         and v["score"] < 1
@@ -109,3 +103,55 @@ async def get_pagespeed(
     ]
     failed.sort(key=lambda a: a["score"])
     return JSONResponse({"recommendations": failed[:5]})
+
+
+_MAX_ITEMS_PER_AUDIT = 5
+_ITEM_FIELDS = (
+    "url", "totalBytes", "wastedBytes", "wastedMs", "score",
+    "label", "groupLabel", "duration", "transferSize",
+)
+
+
+def _extract_node(node: dict) -> dict:
+    return {
+        "selector": node.get("selector"),
+        "snippet": node.get("snippet"),
+        "nodeLabel": node.get("nodeLabel"),
+    }
+
+
+def _extract_item(item: dict) -> dict:
+    cleaned = {k: item[k] for k in _ITEM_FIELDS if k in item}
+    node = item.get("node")
+    if isinstance(node, dict):
+        cleaned["node"] = _extract_node(node)
+    return cleaned
+
+
+def _extract_details(details: dict | None) -> dict | None:
+    if not isinstance(details, dict):
+        return None
+    items = details.get("items")
+    if not isinstance(items, list) or not items:
+        return None
+    cleaned_items = [_extract_item(i) for i in items[:_MAX_ITEMS_PER_AUDIT] if isinstance(i, dict)]
+    if not cleaned_items:
+        return None
+    return {
+        "type": details.get("type"),
+        "items": cleaned_items,
+        "totalItems": len(items),
+        "overallSavingsMs": details.get("overallSavingsMs"),
+        "overallSavingsBytes": details.get("overallSavingsBytes"),
+    }
+
+
+def _format_audit(audit: dict) -> dict:
+    return {
+        "id": audit["id"],
+        "title": audit.get("title", ""),
+        "description": audit.get("description", ""),
+        "score": audit["score"],
+        "displayValue": audit.get("displayValue", ""),
+        "details": _extract_details(audit.get("details")),
+    }
