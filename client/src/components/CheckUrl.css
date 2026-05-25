@@ -1,0 +1,243 @@
+.check-url-page {
+  padding: 24px 28px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.check-url-header {
+  margin-bottom: 20px;
+}
+
+.check-url-header h1 {
+  font-size: 22px;
+  font-weight: 700;
+  margin: 0 0 4px 0;
+  color: var(--text-primary);
+}
+
+.check-url-subtitle {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.check-url-form {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px 18px;
+  margin-bottom: 18px;
+}
+
+.check-url-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.check-url-input {
+  flex: 1 1 320px;
+  min-width: 220px;
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 14px;
+  background: var(--bg-base);
+  color: var(--text-primary);
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.check-url-input:focus {
+  border-color: #5f4ef1;
+  box-shadow: 0 0 0 3px rgba(95, 78, 241, 0.15);
+}
+
+.check-url-btn {
+  padding: 9px 16px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: opacity 0.15s, background 0.15s;
+}
+
+.check-url-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.check-url-btn--primary {
+  background: #5f4ef1;
+  color: #fff;
+}
+
+.check-url-btn--primary:hover:not(:disabled) {
+  background: #4b3dd9;
+}
+
+.check-url-btn--secondary {
+  background: var(--bg-base);
+  color: var(--text-primary);
+  border-color: var(--border);
+}
+
+.check-url-btn--secondary:hover:not(:disabled) {
+  border-color: #5f4ef1;
+  color: #5f4ef1;
+}
+
+.check-url-error {
+  margin: 10px 0 0 0;
+  color: #dc2626;
+  font-size: 12px;
+}
+
+.check-url-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.metric-card {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.metric-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.metric-card-name {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.metric-card-value {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.metric-card-loading,
+.metric-card-error {
+  font-size: 14px;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.metric-card-window {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.metric-card-error-msg {
+  font-size: 11px;
+  color: #dc2626;
+  word-break: break-word;
+}
+
+.metric-card--active {
+  border-color: #5f4ef1;
+  box-shadow: 0 0 0 2px rgba(95, 78, 241, 0.18);
+}
+
+.metric-card-suggestion-btn {
+  margin-top: 10px;
+  width: 100%;
+  padding: 7px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid var(--border);
+  background: var(--bg-base);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.metric-card-suggestion-btn:hover:not(:disabled) {
+  border-color: #5f4ef1;
+  color: #5f4ef1;
+}
+
+.metric-card-suggestion-btn.is-active {
+  background: #5f4ef1;
+  color: #fff;
+  border-color: #5f4ef1;
+}
+
+.metric-card-suggestion-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.check-url-psi {
+  margin-top: 4px;
+}
+
+.check-url-psi-label {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+  padding-left: 2px;
+}
+
+.history-status-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 5px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.history-status-badge--green {
+  background: #d1fae5;
+  color: #065f46;
+  border: 1.5px solid #059669;
+}
+
+.history-status-badge--amber {
+  background: #fef3c7;
+  color: #78350f;
+  border: 1.5px solid #d97706;
+}
+
+.history-status-badge--red {
+  background: #fee2e2;
+  color: #7f1d1d;
+  border: 1.5px solid #dc2626;
+}
+
+html[data-theme="dark"] .history-status-badge--green {
+  background: rgba(16, 185, 129, 0.2);
+  color: #6ee7b7;
+  border-color: #059669;
+}
+
+html[data-theme="dark"] .history-status-badge--amber {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fcd34d;
+  border-color: #d97706;
+}
+
+html[data-theme="dark"] .history-status-badge--red {
+  background: rgba(239, 68, 68, 0.2);
+  color: #fca5a5;
+  border-color: #dc2626;
+}

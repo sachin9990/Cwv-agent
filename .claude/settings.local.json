@@ -7,7 +7,8 @@
       "Bash(npm run *)",
       "Bash(.\\\\venv\\\\Scripts\\\\python.exe -m py_compile routes/tickets.py azure_client.py routes/comments.py routes/metrics.py routes/pagespeed.py utils.py main.py)",
       "Bash(dir C:\\\\Users\\\\Sachin\\\\Desktop *)",
-      "Bash(npx tsc *)"
+      "Bash(npx tsc *)",
+      "Bash(./venv/Scripts/python.exe -c \"from routes import pagespeed; print\\('OK'\\); print\\([n for n in dir\\(pagespeed\\) if not n.startswith\\('__'\\)]\\)\")"
     ]
   }
 }

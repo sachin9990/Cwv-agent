@@ -19,6 +19,7 @@ type SidebarProps = {
 const menuItems: MenuItem[] = [
   { text: "Analyze", icon: "📊", page: "analyze" },
   { text: "Dashboard", icon: "📈", page: "dashboard" },
+  { text: "Check URLs", icon: "🔎", page: "check-url" },
   { text: "History", icon: "🕓", page: "history" },
   { text: "Settings", icon: "⚙️" },
 ];

@@ -36,6 +36,7 @@ async def get_metric(
         {
             "response_from": "New Relic",
             "ticket_id": ticket_id,
+            "metric": metric,
             "value": value,
             "window": window,
             "status": status,

@@ -102,7 +102,10 @@ async def get_pagespeed(
         and (relevant_ids is None or v["id"] in relevant_ids)
     ]
     failed.sort(key=lambda a: a["score"])
-    return JSONResponse({"recommendations": failed[:5]})
+    return JSONResponse({
+        "recommendations": failed[:5],
+        "thirdParties": _extract_third_parties(audits.get("third-party-summary")),
+    })
 
 
 _MAX_ITEMS_PER_AUDIT = 5
@@ -154,4 +157,76 @@ def _format_audit(audit: dict) -> dict:
         "score": audit["score"],
         "displayValue": audit.get("displayValue", ""),
         "details": _extract_details(audit.get("details")),
+    }
+
+
+_MAX_THIRD_PARTY_ENTITIES = 15
+_MAX_SCRIPTS_PER_ENTITY = 5
+
+
+def _entity_name(entity) -> str | None:
+    if isinstance(entity, str):
+        return entity
+    if isinstance(entity, dict):
+        return entity.get("text") or entity.get("url")
+    return None
+
+
+def _extract_third_parties(audit: dict | None) -> dict | None:
+    if not isinstance(audit, dict):
+        return None
+    details = audit.get("details")
+    if not isinstance(details, dict):
+        return None
+    items = details.get("items")
+    if not isinstance(items, list) or not items:
+        return None
+
+    entities = []
+    total_blocking = 0.0
+    total_main_thread = 0.0
+    total_transfer = 0
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        name = _entity_name(item.get("entity"))
+        if not name:
+            continue
+        blocking = item.get("blockingTime") or 0
+        main_thread = item.get("mainThreadTime") or 0
+        transfer = item.get("transferSize") or 0
+        total_blocking += blocking
+        total_main_thread += main_thread
+        total_transfer += transfer
+
+        scripts: list[dict] = []
+        sub = item.get("subItems")
+        if isinstance(sub, dict):
+            for s in (sub.get("items") or [])[:_MAX_SCRIPTS_PER_ENTITY]:
+                if not isinstance(s, dict) or not s.get("url"):
+                    continue
+                scripts.append({
+                    "url": s["url"],
+                    "blockingTime": s.get("blockingTime") or 0,
+                    "mainThreadTime": s.get("mainThreadTime") or 0,
+                    "transferSize": s.get("transferSize") or 0,
+                })
+
+        entities.append({
+            "entity": name,
+            "blockingTime": blocking,
+            "mainThreadTime": main_thread,
+            "transferSize": transfer,
+            "scripts": scripts,
+        })
+
+    entities.sort(key=lambda e: e["blockingTime"], reverse=True)
+    return {
+        "title": audit.get("title", ""),
+        "displayValue": audit.get("displayValue", ""),
+        "totalBlockingTime": total_blocking,
+        "totalMainThreadTime": total_main_thread,
+        "totalTransferSize": total_transfer,
+        "entityCount": len(entities),
+        "entities": entities[:_MAX_THIRD_PARTY_ENTITIES],
     }

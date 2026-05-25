@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import AnalyzeTickets from "./components/AnalyzeTickets";
 import CWVDashboard from "./components/CWVDashBoard";
+import CheckUrl from "./components/CheckUrl";
 import HistoryPage from "./components/HistoryPage";
 import Sidebar from "./components/Sidebar";
 import type { WorkItem } from "./types";
 import "./App.css";
 
-export type Page = "analyze" | "dashboard" | "history";
+export type Page = "analyze" | "dashboard" | "check-url" | "history";
 
 function App() {
   const [page, setPage] = useState<Page>("analyze");
@@ -61,6 +62,7 @@ function App() {
             onGoAnalyze={() => navigate("analyze")}
           />
         )}
+        {page === "check-url" && <CheckUrl />}
         {page === "history" && <HistoryPage />}
       </main>
     </div>
